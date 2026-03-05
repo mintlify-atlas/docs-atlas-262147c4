@@ -1,0 +1,121 @@
+{
+  "projectType": "ai-ml",
+  "projectName": "Codenames AI Benchmark",
+  "projectDescription": "AI benchmark where language models compete in Codenames to evaluate LLM performance across multiple providers",
+  "theme": "aspen",
+  "primaryColor": "#9ba9b9",
+  "lightColor": "#cfd9e1",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/game-mechanics",
+              "concepts/agents",
+              "concepts/baml"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/running-games",
+              "guides/benchmarking",
+              "guides/model-selection",
+              "guides/configuration",
+              "guides/cost-management"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/custom-agents",
+              "advanced/prompt-engineering",
+              "advanced/analysis-metrics",
+              "advanced/custom-board-variants"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Game Engine",
+            "pages": [
+              "api/game/board",
+              "api/game/game-state",
+              "api/game/types"
+            ]
+          },
+          {
+            "group": "Agents",
+            "pages": [
+              "api/agents/base",
+              "api/agents/baml-agents",
+              "api/agents/random-agents"
+            ]
+          },
+          {
+            "group": "Orchestrator",
+            "pages": [
+              "api/orchestrator/game-runner"
+            ]
+          },
+          {
+            "group": "Analysis",
+            "pages": [
+              "api/analysis/pipeline",
+              "api/analysis/metrics",
+              "api/analysis/visualization"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "api/config/game-config",
+              "api/config/model-config"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "BAML-powered universal LLM agents with type-safe structured outputs",
+    "Multi-provider support (OpenAI, Anthropic, Google Gemini, xAI Grok, DeepSeek, OpenRouter)",
+    "Comprehensive benchmark suite with configurable model combinations",
+    "Advanced analysis metrics (ELO ratings, win rates, efficiency, momentum, error patterns)",
+    "Interactive BAML playground for prompt testing without running full games",
+    "Configurable game variants (board size, rules, validation)",
+    "Cost-efficient testing with free OpenRouter models"
+  ],
+  "publicApiSurface": [
+    "Board",
+    "GameState",
+    "HintGiver (abstract base class)",
+    "Guesser (abstract base class)",
+    "BAMLHintGiver",
+    "BAMLGuesser",
+    "BAMLModel (enum of 80+ supported models)",
+    "RandomHintGiver",
+    "RandomGuesser",
+    "GameRunner",
+    "BenchmarkRunner",
+    "run_pipeline (analysis)",
+    "Config",
+    "GameConfig",
+    "generate_word_list"
+  ]
+}
