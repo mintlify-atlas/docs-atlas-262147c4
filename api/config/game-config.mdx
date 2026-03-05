@@ -1,0 +1,289 @@
+---
+title: 'GameConfig'
+description: 'Game configuration constants and rules'
+icon: 'gear'
+---
+
+## Overview
+
+The `GameConfig` class centralizes all game constants and configuration values for Codenames. It defines board size, word distributions, turn limits, and validation rules.
+
+## Classes
+
+### GameConfig
+
+Game configuration constants for Codenames.
+
+#### Board Configuration
+
+<ParamField path="BOARD_SIZE" type="int" default="25">
+  Total number of words on the board
+</ParamField>
+
+<ParamField path="BLUE_WORDS" type="int" default="9">
+  Number of blue team words (starting team gets +1)
+</ParamField>
+
+<ParamField path="RED_WORDS" type="int" default="8">
+  Number of red team words
+</ParamField>
+
+<ParamField path="NEUTRAL_WORDS" type="int" default="7">
+  Number of neutral words
+</ParamField>
+
+<ParamField path="BOMB_COUNT" type="int" default="1">
+  Number of bomb/assassin words
+</ParamField>
+
+#### Game Rules
+
+<ParamField path="MAX_TURNS" type="int" default="50">
+  Maximum turns before game ends (prevents infinite loops)
+</ParamField>
+
+<ParamField path="MAX_GUESSES_PER_TURN" type="Optional[int]" default="None">
+  Maximum guesses per turn. If None, uses hint_count + 1
+</ParamField>
+
+<ParamField path="STARTING_TEAM" type="str" default="BLUE">
+  Which team starts: "BLUE" or "RED"
+</ParamField>
+
+#### Validation
+
+<ParamField path="MIN_HINT_COUNT" type="int" default="1">
+  Minimum number for hints
+</ParamField>
+
+<ParamField path="MAX_HINT_COUNT" type="int" default="9">
+  Maximum number for hints (usually team words + 1)
+</ParamField>
+
+## Methods
+
+### validate()
+
+Validate that the configuration is internally consistent.
+
+```python
+def validate(self) -> bool
+```
+
+**Raises:**
+- `ValueError`: If board size < 9
+- `ValueError`: If board size is even (should be odd for fairness)
+- `ValueError`: If word counts don't sum to board size
+
+**Returns:** `True` if valid
+
+### custom()
+
+Create a custom game configuration with different board size.
+
+```python
+@classmethod
+def custom(
+    cls,
+    board_size: int = 25,
+    starting_team: str = "BLUE"
+) -> GameConfig
+```
+
+<ParamField path="board_size" type="int" default="25">
+  Total number of words (must be odd for fair play)
+</ParamField>
+
+<ParamField path="starting_team" type="str" default="BLUE">
+  Which team starts: "BLUE" or "RED"
+</ParamField>
+
+**Returns:** New `GameConfig` instance with proportional word distributions
+
+## Usage Examples
+
+### Default Configuration
+
+```python
+from config import GameConfig
+
+# Use default 25-word configuration
+config = GameConfig()
+
+print(f"Board size: {config.BOARD_SIZE}")
+print(f"Blue words: {config.BLUE_WORDS}")
+print(f"Red words: {config.RED_WORDS}")
+print(f"Neutral words: {config.NEUTRAL_WORDS}")
+print(f"Bomb count: {config.BOMB_COUNT}")
+
+# Validate configuration
+config.validate()  # Returns True
+```
+
+### Custom Board Size
+
+```python
+from config import GameConfig
+
+# Create 9-word mini game
+mini_config = GameConfig.custom(board_size=9, starting_team="BLUE")
+
+print(f"Mini game configuration:")
+print(f"  Board size: {mini_config.BOARD_SIZE}")  # 9
+print(f"  Blue words: {mini_config.BLUE_WORDS}")   # 4
+print(f"  Red words: {mini_config.RED_WORDS}")     # 3
+print(f"  Neutral words: {mini_config.NEUTRAL_WORDS}")  # 1
+print(f"  Bomb count: {mini_config.BOMB_COUNT}")   # 1
+```
+
+### Custom Parameters
+
+```python
+from config import GameConfig
+
+# Create configuration with custom parameters
+config = GameConfig(
+    BOARD_SIZE=25,
+    BLUE_WORDS=10,
+    RED_WORDS=9,
+    NEUTRAL_WORDS=5,
+    BOMB_COUNT=1,
+    MAX_TURNS=100,
+    MAX_GUESSES_PER_TURN=5,
+    STARTING_TEAM="RED",
+    MIN_HINT_COUNT=1,
+    MAX_HINT_COUNT=10
+)
+
+# Validate before use
+try:
+    config.validate()
+except ValueError as e:
+    print(f"Invalid configuration: {e}")
+```
+
+### Integration with Board
+
+```python
+from game import Board
+from config import GameConfig
+
+# Create custom configuration
+config = GameConfig.custom(board_size=15)
+
+# Use with board
+board = Board.from_word_list(words, config=config)
+```
+
+### Integration with GameRunner
+
+```python
+from orchestrator import GameRunner
+from config import GameConfig, OrchestratorConfig
+
+# Create configurations
+game_config = GameConfig.custom(board_size=25, starting_team="BLUE")
+orchestrator_config = OrchestratorConfig()
+
+# Board will use game_config
+board = Board.from_word_list(words, config=game_config)
+
+# Runner will inherit config from board
+runner = GameRunner(
+    board=board,
+    blue_hint_giver=blue_hg,
+    blue_guesser=blue_g,
+    red_hint_giver=red_hg,
+    red_guesser=red_g,
+    config=orchestrator_config
+)
+```
+
+## Validation Rules
+
+### Board Size Constraints
+
+1. **Minimum size**: 9 words (smallest playable game)
+2. **Odd number**: Board size should be odd for fair play
+3. **Sum check**: BLUE_WORDS + RED_WORDS + NEUTRAL_WORDS + BOMB_COUNT = BOARD_SIZE
+
+### Word Distribution
+
+For custom board sizes, the `custom()` method calculates proportional distribution:
+
+```python
+starting_words = (board_size - 1) // 3 + 1  # ~1/3 + 1
+other_words = starting_words - 1
+neutral_words = board_size - starting_words - other_words - 1
+```
+
+This ensures the starting team has exactly one more word than the opponent.
+
+## Configuration Presets
+
+### Standard Game (25 words)
+
+```python
+GameConfig()  # Default
+# Blue: 9, Red: 8, Neutral: 7, Bomb: 1
+```
+
+### Mini Game (9 words)
+
+```python
+GameConfig.custom(board_size=9)
+# Blue: 4, Red: 3, Neutral: 1, Bomb: 1
+```
+
+### Large Game (49 words)
+
+```python
+GameConfig.custom(board_size=49)
+# Blue: 17, Red: 16, Neutral: 15, Bomb: 1
+```
+
+## Related Configuration Classes
+
+### Config
+
+Main configuration class combining all config sections:
+
+```python
+from config import Config
+
+config = Config()
+print(config.game.BOARD_SIZE)  # Access GameConfig
+print(config.llm.MAX_RETRIES)  # Access LLMConfig
+print(config.orchestrator.VERBOSE_DEFAULT)  # Access OrchestratorConfig
+```
+
+### Global Configuration Instance
+
+```python
+from config import default_config
+
+# Access default configuration
+print(default_config.game.BOARD_SIZE)  # 25
+print(default_config.llm.DEFAULT_TEMPERATURE)  # 0.7
+```
+
+### Backward Compatibility Constants
+
+```python
+from config import BOARD_SIZE, BLUE_WORDS, RED_WORDS
+
+# Module-level constants (for backward compatibility)
+print(BOARD_SIZE)  # 25
+print(BLUE_WORDS)  # 9
+print(RED_WORDS)   # 8
+```
+
+<Warning>
+  Module-level constants are derived from `default_config` at import time and don't reflect runtime changes. Use the `Config` class for dynamic configuration.
+</Warning>
+
+## Related
+
+- [LLMConfig](/api/config/model-config) - LLM configuration
+- [OrchestratorConfig](/api/config/game-config) - Orchestrator configuration
+- [Board](/api/game/board) - Board class that uses GameConfig

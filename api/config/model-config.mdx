@@ -1,0 +1,360 @@
+---
+title: 'Model Configuration'
+description: 'LLM model configuration and helper functions'
+icon: 'microchip'
+---
+
+## Overview
+
+The `model_config` module provides configuration for different LLM models including temperature settings, display names, and model-specific parameters. It includes helper functions for accessing model configurations and selecting models for benchmarking.
+
+## Configuration Constants
+
+### MODEL_CONFIGS
+
+Dictionary mapping `BAMLModel` enum values to model-specific configurations.
+
+```python
+from model_config import MODEL_CONFIGS
+from agents.llm import BAMLModel
+
+# Access model configuration
+config = MODEL_CONFIGS[BAMLModel.GPT4O_MINI]
+print(config)  # {'temperature': 0.7}
+```
+
+**Structure:**
+```python
+{
+    BAMLModel.GPT4O_MINI: {"temperature": 0.7},
+    BAMLModel.O3_MINI: {"temperature": 1.0},  # Reasoning models require 1.0
+    # ... more models
+}
+```
+
+### RESTRICTED_TEMPERATURE_MODELS
+
+Set of models that require temperature 1.0 (OpenAI reasoning models).
+
+```python
+from model_config import RESTRICTED_TEMPERATURE_MODELS
+from agents.llm import BAMLModel
+
+# Check if model has restricted temperature
+if BAMLModel.O3_MINI in RESTRICTED_TEMPERATURE_MODELS:
+    print("This model requires temperature 1.0")
+```
+
+**Models with restricted temperature:**
+- `O4_MINI`
+- `O3_MINI`
+- `O3`
+- `O1`
+- `O1_MINI`
+- `O1_PREVIEW`
+
+## Functions
+
+### get_model_config()
+
+Get configuration dictionary for a specific model.
+
+```python
+def get_model_config(model: BAMLModel) -> Dict[str, Any]
+```
+
+<ParamField path="model" type="BAMLModel" required>
+  Model enum value from `agents.llm.BAMLModel`
+</ParamField>
+
+**Returns:** Dictionary with model configuration. Defaults to `{"temperature": 0.7}` if model not found.
+
+### get_temperature()
+
+Get the appropriate temperature for a model.
+
+```python
+def get_temperature(model: BAMLModel) -> float
+```
+
+<ParamField path="model" type="BAMLModel" required>
+  Model enum value
+</ParamField>
+
+**Returns:** Temperature value (0.7 or 1.0)
+
+### is_temperature_restricted()
+
+Check if a model has temperature restrictions.
+
+```python
+def is_temperature_restricted(model: BAMLModel) -> bool
+```
+
+<ParamField path="model" type="BAMLModel" required>
+  Model enum value
+</ParamField>
+
+**Returns:** `True` if model requires temperature 1.0, `False` otherwise
+
+### get_benchmark_models()
+
+Get the list of models for benchmarking.
+
+```python
+def get_benchmark_models() -> list
+```
+
+**Returns:** List of `BAMLModel` enum values representing diverse models confirmed available as of December 2025.
+
+**Default benchmark models:**
+- `OPENROUTER_DEVSTRAL`
+- `OPENROUTER_MIMO_V2_FLASH`
+- `OPENROUTER_NEMOTRON_NANO`
+- `OPENROUTER_DEEPSEEK_R1T_CHIMERA`
+- `OPENROUTER_DEEPSEEK_R1T2_CHIMERA`
+- `OPENROUTER_GLM_45_AIR`
+- `OPENROUTER_LLAMA_33_70B`
+- `OPENROUTER_OLMO3_32B`
+
+### get_model_display_name()
+
+Get human-readable display name for a model.
+
+```python
+def get_model_display_name(model: BAMLModel) -> str
+```
+
+<ParamField path="model" type="BAMLModel" required>
+  Model enum value
+</ParamField>
+
+**Returns:** Display name string (e.g., "GPT-4o Mini", "Claude Sonnet 4.5")
+
+## Usage Examples
+
+### Getting Model Configuration
+
+```python
+from model_config import get_model_config, get_temperature
+from agents.llm import BAMLModel
+
+# Get full configuration
+config = get_model_config(BAMLModel.GPT4O_MINI)
+print(config)  # {'temperature': 0.7}
+
+# Get just temperature
+temp = get_temperature(BAMLModel.O3_MINI)
+print(temp)  # 1.0 (reasoning model)
+```
+
+### Checking Temperature Restrictions
+
+```python
+from model_config import is_temperature_restricted
+from agents.llm import BAMLModel
+
+# Check if model has temperature restrictions
+if is_temperature_restricted(BAMLModel.O3_MINI):
+    print("This model requires temperature 1.0")
+    temp = 1.0
+else:
+    print("This model uses default temperature 0.7")
+    temp = 0.7
+```
+
+### Using Display Names
+
+```python
+from model_config import get_model_display_name
+from agents.llm import BAMLModel
+
+# Get display names for reporting
+models = [
+    BAMLModel.GPT4O_MINI,
+    BAMLModel.CLAUDE_HAIKU_35,
+    BAMLModel.GEMINI_20_FLASH
+]
+
+for model in models:
+    display_name = get_model_display_name(model)
+    temp = get_temperature(model)
+    print(f"{display_name}: temperature={temp}")
+
+# Output:
+# GPT-4o Mini: temperature=0.7
+# Claude Haiku 3.5: temperature=0.7
+# Gemini 2.0 Flash: temperature=0.7
+```
+
+### Benchmark Model Selection
+
+```python
+from model_config import get_benchmark_models, get_model_display_name
+
+# Get models for benchmarking
+models = get_benchmark_models()
+
+print("Benchmark models:")
+for model in models:
+    print(f"  - {get_model_display_name(model)}")
+
+# Output:
+# Benchmark models:
+#   - Devstral (OpenRouter)
+#   - MIMO V2 Flash (OpenRouter)
+#   - Nemotron Nano 12B (OpenRouter)
+#   ...
+```
+
+### Custom Benchmark Configuration
+
+```python
+from model_config import get_temperature, get_model_display_name
+from agents.llm import BAMLModel
+
+# Define custom benchmark models
+custom_models = [
+    BAMLModel.GPT4O_MINI,
+    BAMLModel.GPT4O,
+    BAMLModel.CLAUDE_HAIKU_35,
+    BAMLModel.CLAUDE_SONNET_45,
+    BAMLModel.GEMINI_20_FLASH,
+    BAMLModel.DEEPSEEK_CHAT
+]
+
+# Create benchmark configuration
+benchmark_config = []
+for model in custom_models:
+    benchmark_config.append({
+        'model': model,
+        'display_name': get_model_display_name(model),
+        'temperature': get_temperature(model)
+    })
+
+print("Benchmark configuration:")
+for config in benchmark_config:
+    print(f"  {config['display_name']}: temp={config['temperature']}")
+```
+
+### Agent Configuration
+
+```python
+from agents import BAMLHintGiver, BAMLGuesser
+from agents.llm import BAMLModel
+from model_config import get_temperature
+
+# Create agents with appropriate temperature
+model = BAMLModel.GPT4O_MINI
+temp = get_temperature(model)
+
+hint_giver = BAMLHintGiver(model)
+guesser = BAMLGuesser(model)
+
+print(f"Created agents with {get_model_display_name(model)}")
+print(f"Using temperature: {temp}")
+```
+
+## Supported Model Families
+
+### OpenAI Models
+
+**GPT-5.2 Series** (December 2025)
+- `GPT5`, `GPT5_MINI`, `GPT5_NANO`
+- `GPT5_CHAT` (GPT-5.2 Instant)
+- `GPT5_PRO` (GPT-5.2 Pro)
+
+**GPT-4.1 Series**
+- `GPT41`, `GPT41_MINI`, `GPT41_NANO`
+
+**Reasoning Models** (temperature 1.0 required)
+- `O4_MINI`, `O3_MINI`, `O3`
+- `O1`, `O1_MINI`, `O1_PREVIEW`
+
+**GPT-4o Series**
+- `GPT4O`, `GPT4O_MINI`
+
+### Anthropic Models
+
+**Claude 4.5 Series** (Latest)
+- `CLAUDE_SONNET_45`
+- `CLAUDE_HAIKU_45`
+
+**Claude 4.x Series**
+- `CLAUDE_OPUS_41`
+- `CLAUDE_SONNET_4`
+- `CLAUDE_OPUS_4`
+
+**Claude 3.x Series**
+- `CLAUDE_SONNET_37`
+- `CLAUDE_HAIKU_35`
+- `CLAUDE_HAIKU_3`
+
+### Google Models
+
+**Gemini 2.5 Series**
+- `GEMINI_25_PRO`
+- `GEMINI_25_FLASH`
+- `GEMINI_25_FLASH_LITE`
+
+**Gemini 2.0 Series**
+- `GEMINI_20_FLASH`
+- `GEMINI_20_FLASH_LITE`
+
+### xAI Models
+
+**Grok 4 Series**
+- `GROK4`
+- `GROK4_FAST_REASONING`
+- `GROK4_FAST_NON_REASONING`
+
+**Grok 3 Series**
+- `GROK3`, `GROK3_FAST`
+- `GROK3_MINI`, `GROK3_MINI_FAST`
+
+### Other Models
+
+**DeepSeek** (V3.2 - December 2025)
+- `DEEPSEEK_CHAT`
+- `DEEPSEEK_REASONER`
+
+**Meta Llama**
+- `LLAMA` (Llama 3 70B)
+
+**OpenRouter Free Models**
+- `OPENROUTER_DEVSTRAL`
+- `OPENROUTER_MIMO_V2_FLASH`
+- `OPENROUTER_NEMOTRON_NANO`
+- `OPENROUTER_DEEPSEEK_R1T_CHIMERA`
+- `OPENROUTER_DEEPSEEK_R1T2_CHIMERA`
+- `OPENROUTER_GLM_45_AIR`
+- `OPENROUTER_LLAMA_33_70B`
+- `OPENROUTER_OLMO3_32B`
+
+## Temperature Guidelines
+
+### Standard Models (0.7)
+
+Most models use temperature 0.7 for balanced creativity and consistency:
+- Good for general gameplay
+- Allows some randomness while maintaining quality
+- Suitable for both hint giving and guessing
+
+### Reasoning Models (1.0)
+
+OpenAI's o-series reasoning models require temperature 1.0:
+- **Required by API**: Cannot use other temperatures
+- More deterministic despite higher value
+- Optimized for reasoning tasks
+
+## Model Availability
+
+<Warning>
+  Model availability changes frequently. The benchmark models returned by `get_benchmark_models()` are confirmed available as of December 2025. Check provider documentation for current availability.
+</Warning>
+
+## Related
+
+- [LLMConfig](/api/config/game-config) - LLM configuration class
+- [BAMLModel](/api/agents/baml-agents) - Model enum definitions
+- [Agents](/api/agents/base) - Agent implementations

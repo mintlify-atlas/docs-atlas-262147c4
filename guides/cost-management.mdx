@@ -1,0 +1,508 @@
+---
+title: Cost Management
+description: Track, estimate, and optimize API costs for your benchmarks
+icon: dollar-sign
+---
+
+## Pricing Overview
+
+API costs vary significantly by model and provider. Understanding costs helps you choose the right models for your use case.
+
+## Cost Per Game (Estimates)
+
+Approximate costs for a single game (25-word board, ~15 turns):
+
+<CardGroup cols={2}>
+  <Card title="Free Models" icon="gift">
+    **$0.00 per game**
+    
+    OpenRouter free tier models:
+    - Devstral
+    - MIMO V2 Flash
+    - Nemotron Nano
+    - DeepSeek Chimera variants
+    - GLM 4.5 Air
+    - Llama 3.3 70B
+    - OLMo 3.1 32B
+  </Card>
+  
+  <Card title="Ultra-Affordable" icon="coins">
+    **~$0.001-0.003 per game**
+    
+    - Gemini 2.5 Flash Lite
+    - Gemini 2.0 Flash Lite
+    - DeepSeek Chat
+    - DeepSeek Reasoner
+  </Card>
+  
+  <Card title="Cost-Effective" icon="dollar-sign">
+    **~$0.003-0.02 per game**
+    
+    - Gemini 2.5 Flash
+    - GPT-4o Mini
+    - Claude Haiku 4.5
+    - GPT-5 Nano
+    - GPT-5 Mini
+  </Card>
+  
+  <Card title="Premium" icon="crown">
+    **~$0.05-0.30 per game**
+    
+    - GPT-5
+    - Claude Sonnet 4.5
+    - Claude Opus 4.1
+    - Gemini 2.5 Pro
+    - O-series models
+  </Card>
+</CardGroup>
+
+## Model Pricing Data
+
+Pricing information is stored in `config.py` under `LLMConfig.MODEL_COSTS`:
+
+### Verified Pricing
+
+Confirmed from official provider pricing pages:
+
+<Tabs>
+  <Tab title="OpenAI">
+    ```python
+    "gpt-4o": {"input": 0.0025, "output": 0.01},
+    "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
+    "gpt-4": {"input": 0.03, "output": 0.06},
+    "gpt-3.5-turbo": {"input": 0.0005, "output": 0.0015},
+    ```
+    
+    Prices in USD per 1K tokens.
+  </Tab>
+  
+  <Tab title="Anthropic">
+    ```python
+    "claude-3-5-sonnet-20241022": {"input": 0.003, "output": 0.015},
+    "claude-3-5-haiku-20241022": {"input": 0.0008, "output": 0.004},
+    "claude-3-haiku-20240307": {"input": 0.00025, "output": 0.00125},
+    ```
+  </Tab>
+  
+  <Tab title="Google">
+    ```python
+    "gemini-2.0-flash": {"input": 0.0001, "output": 0.0004},
+    "gemini-2.0-flash-lite": {"input": 0.000075, "output": 0.0003},
+    ```
+  </Tab>
+  
+  <Tab title="DeepSeek">
+    ```python
+    "deepseek-chat": {"input": 0.00027, "output": 0.0011},
+    "deepseek-reasoner": {"input": 0.00055, "output": 0.00219},
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+Pricing for newer models (GPT-5, Claude 4.5, Grok 4) is marked as UNVERIFIED and may be estimated. Check provider documentation for accurate pricing.
+</Warning>
+
+## Estimating Benchmark Costs
+
+Calculate costs before running large benchmarks:
+
+<Steps>
+  <Step title="Calculate total games">
+    ```python
+    from model_config import get_benchmark_models
+    
+    models = get_benchmark_models()
+    n = len(models)
+    games_per_combo = 2
+    
+    # N × (N-1) × (N-2) × (N-3) combinations
+    combinations = n * (n-1) * (n-2) * (n-3)
+    total_games = combinations * games_per_combo
+    
+    print(f"Total games: {total_games}")
+    ```
+    
+    Example: 8 models × 2 games = 3,360 games
+  </Step>
+  
+  <Step title="Estimate tokens per game">
+    Typical game (~15 turns):
+    - Input tokens: ~3,000-5,000
+    - Output tokens: ~500-1,000
+    
+    ```python
+    avg_input_tokens = 4000
+    avg_output_tokens = 750
+    ```
+  </Step>
+  
+  <Step title="Calculate cost per game">
+    ```python
+    from config import LLMConfig
+    
+    costs = LLMConfig.MODEL_COSTS
+    
+    model_name = "gpt-4o-mini"
+    pricing = costs[model_name]
+    
+    input_cost = (avg_input_tokens / 1000) * pricing["input"]
+    output_cost = (avg_output_tokens / 1000) * pricing["output"]
+    cost_per_game = input_cost + output_cost
+    
+    print(f"Cost per game: ${cost_per_game:.4f}")
+    ```
+  </Step>
+  
+  <Step title="Calculate total cost">
+    ```python
+    # Each game uses 4 models (one per role)
+    total_cost = total_games * cost_per_game * 4
+    
+    print(f"Estimated total: ${total_cost:.2f}")
+    ```
+    
+    Example: 3,360 games × $0.0008 × 4 = ~$10.75
+  </Step>
+</Steps>
+
+## Cost Optimization Strategies
+
+### 1. Start with Free Models
+
+```python
+# model_config.py
+def get_benchmark_models() -> list:
+    return [
+        # All free via OpenRouter!
+        BAMLModel.OPENROUTER_DEVSTRAL,
+        BAMLModel.OPENROUTER_MIMO_V2_FLASH,
+        BAMLModel.OPENROUTER_NEMOTRON_NANO,
+        BAMLModel.OPENROUTER_LLAMA_33_70B,
+    ]
+```
+
+<Info>
+Perfect for testing benchmark setup, validating pipelines, and preliminary experiments at zero cost.
+</Info>
+
+### 2. Mix Free and Paid Models
+
+```python
+def get_benchmark_models() -> list:
+    return [
+        # Free baseline
+        BAMLModel.OPENROUTER_DEVSTRAL,
+        # Cost-effective
+        BAMLModel.DEEPSEEK_CHAT,
+        BAMLModel.GEMINI_25_FLASH,
+        # Premium comparison
+        BAMLModel.GPT5_MINI,
+    ]
+```
+
+### 3. Reduce Games Per Combination
+
+```python
+# benchmark.py
+GAMES_PER_COMBINATION = 1  # Quick validation
+# vs
+GAMES_PER_COMBINATION = 5  # Production benchmark
+```
+
+Cost scales linearly with games per combination.
+
+### 4. Target Specific Comparisons
+
+Instead of all combinations, test specific matchups:
+
+```python
+test_combinations = [
+    # Compare GPT-5 vs Claude head-to-head
+    (BAMLModel.GPT5_MINI, BAMLModel.GPT5_MINI,
+     BAMLModel.CLAUDE_SONNET_45, BAMLModel.CLAUDE_SONNET_45),
+    # Test mixed teams
+    (BAMLModel.GPT5_MINI, BAMLModel.DEEPSEEK_CHAT,
+     BAMLModel.CLAUDE_HAIKU_45, BAMLModel.GEMINI_25_FLASH),
+]
+
+total_games = len(test_combinations) * GAMES_PER_COMBINATION
+```
+
+### 5. Use Mini/Lite Variants
+
+```python
+# Instead of expensive models
+BAMLModel.GPT5          # ~$0.10/game
+BAMLModel.CLAUDE_OPUS_41  # ~$0.30/game
+
+# Use affordable alternatives
+BAMLModel.GPT5_MINI     # ~$0.02/game  
+BAMLModel.CLAUDE_HAIKU_45  # ~$0.01/game
+```
+
+## Provider Spending Limits
+
+Set spending limits in provider dashboards to prevent unexpected charges:
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" icon="shield">
+    1. Go to [platform.openai.com/settings/organization/billing/limits](https://platform.openai.com/settings/organization/billing/limits)
+    2. Set monthly budget limit
+    3. Configure email alerts
+  </Card>
+  
+  <Card title="Anthropic" icon="shield">
+    1. Go to [console.anthropic.com/settings/limits](https://console.anthropic.com/settings/limits)
+    2. Set spending limits
+    3. Enable notifications
+  </Card>
+  
+  <Card title="Google" icon="shield">
+    1. Go to [console.cloud.google.com/billing](https://console.cloud.google.com/billing)
+    2. Create budget alert
+    3. Set spending threshold
+  </Card>
+  
+  <Card title="OpenRouter" icon="shield">
+    1. Go to [openrouter.ai/settings](https://openrouter.ai/settings)
+    2. Set credit limit
+    3. Use free models when possible
+  </Card>
+</CardGroup>
+
+## Cost Tracking
+
+### During Benchmarks
+
+The benchmark tracks model usage:
+
+```python
+result = runner.run()
+
+# Access per-model statistics
+for model_key, metrics in result.model_performance.items():
+    games = metrics['games_played']
+    turns = metrics['turns_played']
+    print(f"{model_key}: {games} games, {turns} turns")
+```
+
+### Post-Benchmark Analysis
+
+Estimate costs from benchmark results:
+
+```python
+import json
+from config import LLMConfig
+
+# Load results
+with open('benchmark_results/benchmark_20260305.json') as f:
+    data = json.load(f)
+
+# Calculate costs
+costs = LLMConfig.MODEL_COSTS
+total_cost = 0
+
+for game in data['games']:
+    for role in ['blue_hint_giver_model', 'blue_guesser_model',
+                 'red_hint_giver_model', 'red_guesser_model']:
+        model = game[role]
+        # Estimate based on turns and model pricing
+        # (Actual calculation would need token counts)
+        
+print(f"Estimated total cost: ${total_cost:.2f}")
+```
+
+## Price-Performance Comparison
+
+Best value models (quality per dollar):
+
+<Tabs>
+  <Tab title="Best Free">
+    **OpenRouter Models**
+    
+    - Llama 3.3 70B: Large, capable, $0.00
+    - DeepSeek R1T2 Chimera: Reasoning, $0.00
+    - Devstral: Fast Mistral, $0.00
+    
+    Perfect for unlimited experimentation.
+  </Tab>
+  
+  <Tab title="Best Budget">
+    **Under $0.01/game**
+    
+    - DeepSeek Chat: $0.002, excellent quality
+    - Gemini 2.5 Flash: $0.003, fast and reliable
+    - Claude Haiku 4.5: $0.01, premium quality
+    
+    Ideal for production benchmarks.
+  </Tab>
+  
+  <Tab title="Best Premium">
+    **Flagship Performance**
+    
+    - GPT-5 Mini: $0.02, latest OpenAI
+    - Claude Sonnet 4.5: $0.05, top Anthropic
+    - GPT-5: $0.10, frontier performance
+    
+    For when quality matters most.
+  </Tab>
+</Tabs>
+
+## Special Pricing Features
+
+### GPT-5.2 Prompt Caching
+
+GPT-5.2 models offer 90% discount on cached inputs:
+
+```python
+# Regular pricing
+GPT5: $1.75/1M input, $14/1M output
+
+# Cached input (repeated prompts)
+GPT5: $0.175/1M input, $14/1M output
+```
+
+Benefits benchmarks with consistent system prompts.
+
+### Claude Context Caching
+
+Claude 4.5 models support prompt caching:
+
+```python
+# Cache the Codenames rules and board state
+# Reduces costs for multi-turn games
+```
+
+Check provider documentation for implementation.
+
+## Cost Management Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always validate with free models first">
+    ```bash
+    # 1. Test with free models
+    python benchmark.py  # Uses OpenRouter free tier
+    
+    # 2. Verify pipeline works
+    python analyze_benchmark_results.py ...
+    
+    # 3. Then run with paid models
+    ```
+  </Accordion>
+  
+  <Accordion title="Set hard spending limits">
+    Configure limits at provider level:
+    - Daily limit: Prevents runaway costs
+    - Monthly budget: Tracks spending
+    - Email alerts: Get notified at 50%, 80%, 100%
+  </Accordion>
+  
+  <Accordion title="Monitor costs during runs">
+    Check provider dashboards periodically:
+    - OpenAI: Usage tab shows real-time costs
+    - Anthropic: Console shows current spend
+    - Track against estimates
+  </Accordion>
+  
+  <Accordion title="Use mini variants for development">
+    Development workflow:
+    ```python
+    # Development: Fast, cheap
+    BAMLModel.GPT5_NANO
+    BAMLModel.GEMINI_25_FLASH_LITE
+    
+    # Production: Full quality
+    BAMLModel.GPT5_MINI
+    BAMLModel.GEMINI_25_FLASH
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Emergency Cost Control
+
+If costs spiral unexpectedly:
+
+<Steps>
+  <Step title="Stop running benchmarks">
+    ```bash
+    # Ctrl+C to interrupt
+    # Or kill the process
+    pkill -f benchmark.py
+    ```
+  </Step>
+  
+  <Step title="Revoke API keys temporarily">
+    Go to provider dashboards and disable keys until you investigate.
+  </Step>
+  
+  <Step title="Review usage">
+    Check provider usage dashboards:
+    - Which models used most tokens?
+    - Were there repeated errors causing retries?
+    - Did games run longer than expected?
+  </Step>
+  
+  <Step title="Adjust configuration">
+    ```python
+    # Reduce limits
+    config.game.MAX_TURNS = 20  # Shorter games
+    config.llm.MAX_RETRIES = 1  # Fewer retries
+    
+    # Use cheaper models
+    BENCHMARK_MODELS = [BAMLModel.OPENROUTER_DEVSTRAL]
+    ```
+  </Step>
+</Steps>
+
+## Cost Reporting
+
+Generate cost reports from benchmarks:
+
+```python
+from config import LLMConfig
+
+def estimate_benchmark_cost(result_file):
+    with open(result_file) as f:
+        data = json.load(f)
+    
+    costs = LLMConfig.MODEL_COSTS
+    total = 0
+    
+    for model_key, metrics in data['model_performance'].items():
+        model_name = metrics['model']
+        games = metrics['games_played']
+        
+        # Estimate tokens (simplified)
+        est_input = games * 4000
+        est_output = games * 750
+        
+        if model_name in costs:
+            pricing = costs[model_name]
+            cost = (est_input/1000 * pricing['input'] + 
+                   est_output/1000 * pricing['output'])
+            total += cost
+            
+            print(f"{model_key}: ${cost:.2f}")
+    
+    print(f"\nTotal estimated: ${total:.2f}")
+
+estimate_benchmark_cost('benchmark_results/benchmark_20260305.json')
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Model Selection" icon="robot" href="/guides/model-selection">
+    Compare model capabilities and pricing
+  </Card>
+  <Card title="Benchmarking" icon="chart-line" href="/guides/benchmarking">
+    Run cost-effective benchmarks
+  </Card>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Optimize settings for cost control
+  </Card>
+  <Card title="Running Games" icon="play" href="/guides/running-games">
+    Test models before committing to benchmarks
+  </Card>
+</CardGroup>

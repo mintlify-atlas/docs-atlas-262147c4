@@ -1,0 +1,258 @@
+---
+title: 'GameRunner'
+description: 'Orchestrates complete Codenames games with 4 agents'
+icon: 'play'
+---
+
+## Overview
+
+The `GameRunner` class orchestrates a complete Codenames game with 4 agents (2 hint givers and 2 guessers). It handles the full game loop including hint validation, guess execution, turn switching, and retry logic for handling API errors.
+
+## Classes
+
+### GameResult
+
+Complete result of a game for analysis.
+
+<ParamField path="game_id" type="str" required>
+  Unique identifier for the game
+</ParamField>
+
+<ParamField path="outcome" type="GameOutcome" required>
+  Final outcome of the game (BLUE_WIN, RED_WIN, DRAW, etc.)
+</ParamField>
+
+<ParamField path="winner" type="Optional[Team]">
+  Winning team (Team.BLUE or Team.RED), None for draws
+</ParamField>
+
+<ParamField path="total_turns" type="int" required>
+  Total number of turns played
+</ParamField>
+
+<ParamField path="final_scores" type="tuple" required>
+  Tuple of (blue_remaining, red_remaining) cards
+</ParamField>
+
+<ParamField path="snapshot" type="Dict[str, Any]" required>
+  Complete game state snapshot for analysis
+</ParamField>
+
+<ParamField path="blue_hint_giver_name" type="str" required>
+  Class name of blue team's hint giver
+</ParamField>
+
+<ParamField path="blue_guesser_name" type="str" required>
+  Class name of blue team's guesser
+</ParamField>
+
+<ParamField path="red_hint_giver_name" type="str" required>
+  Class name of red team's hint giver
+</ParamField>
+
+<ParamField path="red_guesser_name" type="str" required>
+  Class name of red team's guesser
+</ParamField>
+
+<ParamField path="blue_hint_giver_model" type="Optional[str]">
+  LLM model name for blue hint giver
+</ParamField>
+
+<ParamField path="blue_guesser_model" type="Optional[str]">
+  LLM model name for blue guesser
+</ParamField>
+
+<ParamField path="red_hint_giver_model" type="Optional[str]">
+  LLM model name for red hint giver
+</ParamField>
+
+<ParamField path="red_guesser_model" type="Optional[str]">
+  LLM model name for red guesser
+</ParamField>
+
+<ParamField path="error" type="Optional[str]">
+  Error message if game ended due to error
+</ParamField>
+
+<ParamField path="timestamp" type="datetime">
+  Timestamp when game completed
+</ParamField>
+
+#### Methods
+
+<ResponseField name="to_dict" type="dict">
+  Convert GameResult to dictionary for logging/storage
+  
+  ```python
+  result = game_runner.run()
+  result_dict = result.to_dict()
+  ```
+</ResponseField>
+
+### GameRunner
+
+Orchestrates a complete Codenames game with 4 agents.
+
+#### Constructor
+
+```python
+GameRunner(
+    board: Board,
+    blue_hint_giver: HintGiver,
+    blue_guesser: Guesser,
+    red_hint_giver: HintGiver,
+    red_guesser: Guesser,
+    max_turns: Optional[int] = None,
+    verbose: Optional[bool] = None,
+    game_id: Optional[str] = None,
+    config: Optional[OrchestratorConfig] = None,
+    llm_config: Optional[LLMConfig] = None
+)
+```
+
+<ParamField path="board" type="Board" required>
+  The game board with word assignments
+</ParamField>
+
+<ParamField path="blue_hint_giver" type="HintGiver" required>
+  Blue team's hint giver agent
+</ParamField>
+
+<ParamField path="blue_guesser" type="Guesser" required>
+  Blue team's guesser agent
+</ParamField>
+
+<ParamField path="red_hint_giver" type="HintGiver" required>
+  Red team's hint giver agent
+</ParamField>
+
+<ParamField path="red_guesser" type="Guesser" required>
+  Red team's guesser agent
+</ParamField>
+
+<ParamField path="max_turns" type="Optional[int]">
+  Maximum turns before declaring draw (uses config default if None)
+</ParamField>
+
+<ParamField path="verbose" type="Optional[bool]">
+  Print game progress (uses config default if None)
+</ParamField>
+
+<ParamField path="game_id" type="Optional[str]">
+  Optional game identifier (auto-generated if None)
+</ParamField>
+
+<ParamField path="config" type="Optional[OrchestratorConfig]">
+  Orchestrator configuration (uses default if None)
+</ParamField>
+
+<ParamField path="llm_config" type="Optional[LLMConfig]">
+  LLM configuration for retry settings (uses default if None)
+</ParamField>
+
+## Methods
+
+### run()
+
+Run the complete game until completion.
+
+```python
+def run(self) -> GameResult
+```
+
+**Returns:** `GameResult` with complete game data including winner, scores, and full game snapshot.
+
+## Usage Example
+
+```python
+from game import Board
+from agents import BAMLHintGiver, BAMLGuesser
+from agents.llm import BAMLModel
+from orchestrator import GameRunner
+from config import GameConfig, OrchestratorConfig, LLMConfig
+
+# Create board
+board = Board.from_word_list(
+    words,
+    config=GameConfig()
+)
+
+# Create agents
+blue_hint_giver = BAMLHintGiver(BAMLModel.GPT4O_MINI)
+blue_guesser = BAMLGuesser(BAMLModel.GPT4O_MINI)
+red_hint_giver = BAMLHintGiver(BAMLModel.CLAUDE_HAIKU_35)
+red_guesser = BAMLGuesser(BAMLModel.CLAUDE_HAIKU_35)
+
+# Create game runner
+runner = GameRunner(
+    board=board,
+    blue_hint_giver=blue_hint_giver,
+    blue_guesser=blue_guesser,
+    red_hint_giver=red_hint_giver,
+    red_guesser=red_guesser,
+    max_turns=50,
+    verbose=True,
+    config=OrchestratorConfig(),
+    llm_config=LLMConfig()
+)
+
+# Run the game
+result = runner.run()
+
+# Access results
+print(f"Winner: {result.winner}")
+print(f"Outcome: {result.outcome}")
+print(f"Total turns: {result.total_turns}")
+print(f"Final scores: {result.final_scores}")
+```
+
+## Game Loop Details
+
+The `GameRunner` handles the full game loop:
+
+1. **Get hint** from current team's hint giver
+2. **Validate hint** against board words (no exact matches or substrings)
+3. **Get guesses** from current team's guesser
+4. **Execute guesses** and provide feedback
+5. **Switch teams** and repeat until game over
+
+## Retry Logic
+
+The runner includes robust retry logic for handling API errors:
+
+- **Exponential backoff**: 5s, 10s, 20s delays with random jitter
+- **Max retries**: Configurable via `LLMConfig.MAX_RETRIES` (default: 3)
+- **Retryable errors**: Service unavailable, rate limits, timeouts, connection errors
+- **Non-retryable errors**: Invalid hints, validation failures, non-string responses
+
+## Hint Validation
+
+Hints are validated per official Codenames rules:
+
+- Cannot exactly match a board word
+- Cannot contain a board word as substring
+- Cannot be a substring of a board word
+- Must have count within configured bounds (MIN_HINT_COUNT to MAX_HINT_COUNT)
+
+## Error Handling
+
+The runner tracks various error types:
+
+- **Invalid guesses**: Not on board, already revealed, non-string type
+- **Hint errors**: Invalid format, contains board words
+- **API errors**: Timeouts, service unavailable, rate limits
+- **Bomb hits**: Guessing the assassin card
+
+All errors are logged to `GameResult.error` for analysis.
+
+## Thread Safety
+
+<Warning>
+  `GameRunner` is not thread-safe. Create separate instances for concurrent games.
+</Warning>
+
+## Related
+
+- [GameConfig](/api/config/game-config) - Game configuration options
+- [Board](/api/game/board) - Game board management
+- [Agents](/api/agents/base) - Hint giver and guesser implementations

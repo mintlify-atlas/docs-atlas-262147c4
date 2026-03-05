@@ -1,80 +1,320 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Run your first AI Codenames game in 5 minutes
 ---
 
-## Get started in three steps
+# Quick Start
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+Get up and running with the Codenames AI Benchmark in minutes. This guide will have you watching AI models compete in a strategic word game.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  **Time to complete:** ~5 minutes
+  
+  **What you'll do:** Install dependencies, set up one API key, and run a demo game
 </Note>
+
+## Prerequisites
+
+- Python 3.8 or higher
+- pip (Python package manager)
+- At least one API key from: OpenAI, Anthropic, Google, xAI, DeepSeek, or OpenRouter
+
+<Warning>
+  **Recommended for testing:** Get a free [OpenRouter API key](https://openrouter.ai/keys) to access multiple models without cost.
+</Warning>
+
+## Installation & Setup
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/your-org/code-names-benchmark.git
+    cd code-names-benchmark
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+    This installs:
+    - `baml-py==0.211.2` - Structured LLM outputs
+    - `openai>=1.0.0` - OpenAI, xAI, and DeepSeek client
+    - `anthropic>=0.18.0` - Claude models
+    - `google-generativeai>=0.3.0` - Gemini models
+    - `python-dotenv>=1.0.0` - Environment variable loading
+    - Analysis tools: pandas, numpy, matplotlib, seaborn, scipy
+  </Step>
+
+  <Step title="Configure API keys">
+    Copy the example environment file and add your API key:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Edit `.env` and add at least one API key:
+
+    ```bash
+    # Choose at least one provider:
+
+    # OpenRouter (free models available - recommended for testing)
+    OPENROUTER_API_KEY=your_openrouter_key_here
+
+    # OpenAI (GPT-5, GPT-4.1, o-series, GPT-4o)
+    OPENAI_API_KEY=your_openai_key_here
+
+    # Anthropic (Claude Sonnet 4.5, Haiku 4.5, Opus 4.1)
+    ANTHROPIC_API_KEY=your_anthropic_key_here
+
+    # Google (Gemini 2.5, Gemini 2.0)
+    GOOGLE_API_KEY=your_google_key_here
+
+    # xAI (Grok 4, Grok 3)
+    XAI_API_KEY=your_xai_key_here
+
+    # DeepSeek (DeepSeek V3.2)
+    DEEPSEEK_API_KEY=your_deepseek_key_here
+    ```
+
+    <CardGroup cols={3}>
+      <Card title="OpenRouter" icon="circle" href="https://openrouter.ai/keys">
+        Many free models - best for testing
+      </Card>
+      <Card title="OpenAI" icon="circle" href="https://platform.openai.com/api-keys">
+        GPT-5, GPT-4.1, reasoning models
+      </Card>
+      <Card title="Anthropic" icon="circle" href="https://console.anthropic.com/settings/keys">
+        Claude Sonnet 4.5, Haiku, Opus
+      </Card>
+      <Card title="Google" icon="circle" href="https://aistudio.google.com/app/apikey">
+        Gemini 2.5 Pro, Flash variants
+      </Card>
+      <Card title="xAI" icon="circle" href="https://console.x.ai">
+        Grok 4, Grok 3 models
+      </Card>
+      <Card title="DeepSeek" icon="circle" href="https://platform.deepseek.com/api_keys">
+        DeepSeek V3.2 Chat, Reasoner
+      </Card>
+    </CardGroup>
+  </Step>
+
+  <Step title="Run the demo game">
+    The demo is pre-configured to use **free OpenRouter models**:
+
+    ```bash
+    python3 demo_simple_game.py
+    ```
+
+    You'll see verbose output showing:
+    - Game setup and board state (25 words)
+    - Each hint given by spymasters
+    - Each guess made by field operatives
+    - Turn-by-turn results
+    - Final game outcome and statistics
+
+    <Note>
+      Games typically take 1-2 minutes to complete as AI models think through their moves.
+    </Note>
+  </Step>
+</Steps>
+
+## Understanding the Output
+
+### Game Setup Phase
+
+```
+======================================================================
+  CODENAMES: MULTI-MODEL DEMO
+======================================================================
+
+--- Configured Models ---
+  Blue Team Hint Giver: Devstral
+  Blue Team Guesser: MIMO V2 Flash
+  Red Team Hint Giver: OLMo 3.1 32B
+  Red Team Guesser: Nemotron Nano 12B
+
+--- Checking API Keys ---
+  [OK] Devstral - API key found
+  [OK] MIMO V2 Flash - API key found
+  [OK] OLMo 3.1 32B - API key found
+  [OK] Nemotron Nano 12B - API key found
+
+--- Board Layout (Spymaster View) ---
+   1. [BLUE] APPLE
+   2. [RED] TIGER
+   3. [NEUTRAL] CLOUD
+   ...
+```
+
+### Turn-by-Turn Gameplay
+
+```
+--- Turn 1 (BLUE TEAM) ---
+Hint: 'FRUIT' for 2 word(s)
+Guesses:
+  1. [CORRECT] APPLE (blue)
+  2. [CORRECT] BANANA (blue)
+  3. [WRONG] LEMON (neutral) - Turn ends
+
+--- Turn 2 (RED TEAM) ---
+Hint: 'ANIMAL' for 3 word(s)
+Guesses:
+  1. [CORRECT] TIGER (red)
+  2. [CORRECT] LION (red)
+  3. [WRONG] EAGLE (blue) - Turn ends
+```
+
+### Final Results
+
+```
+======================================================================
+  FINAL RESULTS
+======================================================================
+
+Game Outcome: WINNER
+
+Winner: BLUE TEAM!
+
+Game Statistics:
+  • Total Turns: 12
+  • Blue Team Words Remaining: 0
+  • Red Team Words Remaining: 2
+```
+
+## Customize Your Game
+
+Edit the `Players` class in `demo_simple_game.py` to try different models:
+
+```python demo_simple_game.py
+class Players:
+    # Change these to any available model!
+    BLUE_HINT_GIVER = BAMLModel.GPT5_MINI
+    BLUE_GUESSER = BAMLModel.GPT5_MINI
+    RED_HINT_GIVER = BAMLModel.CLAUDE_SONNET_45
+    RED_GUESSER = BAMLModel.CLAUDE_SONNET_45
+```
+
+### Available Free Models (OpenRouter)
+
+```python
+# No API costs - perfect for testing!
+BAMLModel.OPENROUTER_DEVSTRAL              # Devstral (Mistral)
+BAMLModel.OPENROUTER_MIMO_V2_FLASH         # MIMO V2 Flash
+BAMLModel.OPENROUTER_NEMOTRON_NANO         # Nemotron Nano 12B
+BAMLModel.OPENROUTER_DEEPSEEK_R1T_CHIMERA  # DeepSeek R1T Chimera
+BAMLModel.OPENROUTER_GLM_45_AIR            # GLM 4.5 Air
+BAMLModel.OPENROUTER_LLAMA_33_70B          # Llama 3.3 70B
+BAMLModel.OPENROUTER_OLMO3_32B             # OLMo 3.1 32B
+```
+
+### Frontier Models
+
+```python
+# OpenAI GPT-5 Series
+BAMLModel.GPT5              # GPT-5 (most capable)
+BAMLModel.GPT5_MINI         # GPT-5 Mini (balanced)
+BAMLModel.GPT5_NANO         # GPT-5 Nano (fast)
+
+# Anthropic Claude 4.5
+BAMLModel.CLAUDE_SONNET_45  # Claude Sonnet 4.5 (excellent performance)
+BAMLModel.CLAUDE_HAIKU_45   # Claude Haiku 4.5 (fast, affordable)
+
+# Google Gemini 2.5
+BAMLModel.GEMINI_25_PRO     # Gemini 2.5 Pro (most capable)
+BAMLModel.GEMINI_25_FLASH   # Gemini 2.5 Flash (fast)
+
+# DeepSeek V3.2
+BAMLModel.DEEPSEEK_CHAT     # DeepSeek V3.2 (very cost-effective)
+BAMLModel.DEEPSEEK_REASONER # DeepSeek V3.2 with reasoning
+```
+
+## Run Programmatically
+
+Create your own game script:
+
+```python custom_game.py
+from utils import generate_word_list
+from game import Board, Team
+from agents.llm import BAMLHintGiver, BAMLGuesser, BAMLModel
+from orchestrator import GameRunner
+
+# Generate board
+words = generate_word_list(25)
+board = Board(words)
+
+# Create agents - mix and match any models!
+runner = GameRunner(
+    board=board,
+    blue_hint_giver=BAMLHintGiver(Team.BLUE, model=BAMLModel.GPT5_MINI),
+    blue_guesser=BAMLGuesser(Team.BLUE, model=BAMLModel.GPT5_MINI),
+    red_hint_giver=BAMLHintGiver(Team.RED, model=BAMLModel.CLAUDE_SONNET_45),
+    red_guesser=BAMLGuesser(Team.RED, model=BAMLModel.CLAUDE_SONNET_45),
+    verbose=True
+)
+
+# Run game
+result = runner.run()
+print(f"Winner: {result.winner}, Turns: {result.total_turns}")
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title='"No API keys found" error'>
+    1. Make sure you copied `.env.example` to `.env`
+    2. Verify your API key is valid and not expired
+    3. Check that the key name matches exactly (e.g., `OPENROUTER_API_KEY`)
+    4. Ensure no extra spaces around the `=` sign
+  </Accordion>
+
+  <Accordion title='"ModuleNotFoundError" error'>
+    Run `pip install -r requirements.txt` to install all dependencies.
+    
+    If using a virtual environment, make sure it's activated before installing.
+  </Accordion>
+
+  <Accordion title='"Rate limit exceeded" error'>
+    - **Free tier limits:** OpenRouter free models have usage limits
+    - **Solution 1:** Wait a few minutes and try again
+    - **Solution 2:** Switch to a different provider
+    - **Solution 3:** Upgrade to a paid tier for higher limits
+  </Accordion>
+
+  <Accordion title="Game runs very slowly">
+    This is normal! LLM API calls take 2-10 seconds each. A complete game makes 20-50+ API calls.
+    
+    **Tips:**
+    - Use `verbose=True` to see progress
+    - Try faster models (Haiku, Flash Lite, Mini variants)
+    - Be patient - strategic thinking takes time!
+  </Accordion>
+
+  <Accordion title="BAML generation errors">
+    If you see errors about BAML client code:
+    
+    ```bash
+    baml generate
+    ```
+    
+    This regenerates the client from `baml_src/` definitions.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Detailed Installation" icon="wrench" href="/installation">
+    Complete setup guide with verification steps
+  </Card>
+  <Card title="Run Benchmarks" icon="chart-line" href="/guides/benchmarking">
+    Evaluate models across multiple games
+  </Card>
+  <Card title="Configure Games" icon="sliders" href="/guides/configuration">
+    Customize board size, rules, and parameters
+  </Card>
+  <Card title="Edit Prompts" icon="code" href="/advanced/prompt-engineering">
+    Modify AI agent behavior with BAML
+  </Card>
+</CardGroup>

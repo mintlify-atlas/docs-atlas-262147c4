@@ -1,0 +1,282 @@
+---
+title: 'Visualization'
+description: 'Generate charts and plots from analysis results'
+icon: 'chart-simple'
+---
+
+## Overview
+
+The visualization module generates comprehensive charts and plots from analysis results. It creates publication-quality visualizations for benchmarks including win rates, Elo ratings, efficiency metrics, error analysis, and game dynamics.
+
+## Functions
+
+### create_visualizations()
+
+Generate all visualization plots from analysis pipeline results.
+
+```python
+from analysis.viz import create_visualizations
+
+def create_visualizations(
+    result: AnalysisResult,
+    output_dir: Path
+) -> None
+```
+
+<ParamField path="result" type="AnalysisResult" required>
+  Complete analysis results from pipeline
+</ParamField>
+
+<ParamField path="output_dir" type="Path" required>
+  Directory to save generated plots
+</ParamField>
+
+**Generates:** 11 PNG files at 300 DPI with publication-quality formatting.
+
+## Generated Visualizations
+
+### 1. Team Combination Win Rates
+
+**File:** `team_combination_win_rates.png`
+
+Horizontal bar chart showing top 15 team combinations by blue win rate. Green bars indicate greater than 50% win rate, red bars indicate less than 50%.
+
+**Dimensions:** 14" × 10"
+
+### 2. Model Performance by Role
+
+**File:** `model_performance_by_role.png`
+
+Side-by-side horizontal bar charts showing:
+- Best hint givers (left panel)
+- Best guessers (right panel)
+
+**Dimensions:** 16" × 8"
+
+### 3. Matchup Heatmap
+
+**File:** `matchup_heatmap.png`
+
+Head-to-head win rate matrix for hint givers. Uses red-yellow-green color scale centered at 50%.
+
+**Dimensions:** 12" × 10"
+
+### 4. Elo Ratings
+
+**File:** `elo_ratings.png`
+
+Grouped bar chart showing Elo ratings by model and role. Blue bars for hint giver, green bars for guesser.
+
+**Dimensions:** 12" × 8"
+
+### 5. Role Versatility
+
+**File:** `role_versatility.png`
+
+Scatter plot of hint giver vs guesser win rates. Point size indicates total games, color indicates combined win rate. Diagonal line shows equal performance.
+
+**Dimensions:** 10" × 8"
+
+### 6. Hint Efficiency vs Win Rate
+
+**File:** `hint_efficiency_vs_winrate.png`
+
+Scatter plot of hint efficiency (correct guesses / promised) vs win rate. Point size indicates hints given, color indicates risk profile:
+- Red: aggressive (avg hint count greater than 2.5)
+- Orange: balanced (1.5-2.5)
+- Blue: conservative (less than 1.5)
+
+**Dimensions:** 10" × 8"
+
+### 7. Guesser Accuracy
+
+**File:** `guesser_accuracy.png`
+
+Scatter plot of first guess accuracy vs overall accuracy. Point size indicates games played, color intensity indicates bomb hit rate.
+
+**Dimensions:** 10" × 8"
+
+### 8. Confidence Intervals
+
+**File:** `confidence_intervals.png`
+
+Horizontal line plot showing 95% Wilson confidence intervals for win rates. Red dots indicate point estimates, blue lines show intervals.
+
+**Dimensions:** 12" × 10"
+
+### 9. Hint Count Distribution
+
+**File:** `hint_count_distribution.png`
+
+Bar chart showing distribution of hint counts with success rates annotated in green.
+
+**Dimensions:** 10" × 6"
+
+### 10. Error Analysis
+
+**File:** `error_analysis.png`
+
+Stacked bar chart showing error breakdown by model:
+- Red: bomb hits
+- Orange: invalid (offboard)
+- Purple: invalid (revealed)
+- Gray: invalid (other)
+
+**Dimensions:** 12" × 6"
+
+### 11. Game Dynamics
+
+**File:** `game_dynamics.png`
+
+Two histograms:
+- Left: Game length distribution with mean line
+- Right: Lead changes distribution (competitiveness)
+
+**Dimensions:** 14" × 5"
+
+## Usage Example
+
+```python
+from pathlib import Path
+from analysis.pipeline import run_pipeline
+from analysis.viz import create_visualizations
+
+# Run analysis
+results_path = Path("benchmark_results/my_benchmark")
+result = run_pipeline(results_path)
+
+# Generate all visualizations
+output_dir = Path("analysis_output")
+output_dir.mkdir(exist_ok=True)
+create_visualizations(result, output_dir)
+
+print(f"Visualizations saved to {output_dir}/")
+```
+
+## Customization
+
+The visualization module uses:
+- **Style:** Default matplotlib with seaborn color palettes
+- **DPI:** 300 (publication quality)
+- **Format:** PNG with tight bounding boxes
+- **Fonts:** System default, 8-10pt for labels
+
+To customize, modify the `create_visualizations()` function or create custom plots using the `AnalysisResult` data:
+
+```python
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Custom plot example
+plt.figure(figsize=(10, 6))
+sns.barplot(
+    data=result.top_hint.head(10),
+    x='avg_win_rate',
+    y='model',
+    palette='viridis'
+)
+plt.title('Top 10 Hint Givers')
+plt.xlabel('Win Rate')
+plt.tight_layout()
+plt.savefig('custom_plot.png', dpi=300)
+plt.close()
+```
+
+## Data Requirements
+
+Visualization generation is robust to missing data:
+
+- Empty DataFrames skip that visualization
+- Missing columns use sensible defaults
+- Errors print warnings but don't crash
+- Minimum data requirements checked per plot
+
+## Performance
+
+Generation time scales with:
+- Number of models (affects heatmap size)
+- Number of data points (affects scatter plots)
+- Output DPI setting
+
+Typical generation time: 5-10 seconds for 11 plots.
+
+## Color Palettes
+
+### Win Rates
+- Green (#2ecc71): greater than 50% win rate
+- Red (#e74c3c): less than 50% win rate
+- Gray: 50% baseline
+
+### Risk Profiles
+- Red (#e74c3c): aggressive
+- Orange (#f39c12): balanced
+- Blue (#3498db): conservative
+
+### Heatmaps
+- RdYlGn: Red-yellow-green scale centered at 50%
+
+### Elo Ratings
+- Blue (#3498db): hint giver
+- Green (#2ecc71): guesser
+
+## Best Practices
+
+<Tip>
+  Generate visualizations after every benchmark run to track model performance over time.
+</Tip>
+
+<Warning>
+  Large benchmarks (50+ models) may produce crowded heatmaps. Consider filtering to top performers or creating role-specific plots.
+</Warning>
+
+## Automation
+
+Integrate visualization generation into your benchmark pipeline:
+
+```python
+from pathlib import Path
+from analysis.pipeline import run_pipeline
+from analysis.viz import create_visualizations
+
+def analyze_and_visualize(benchmark_dir: Path):
+    """Run analysis and generate visualizations."""
+    result = run_pipeline(benchmark_dir)
+    
+    # Create timestamped output directory
+    output_dir = benchmark_dir / "analysis"
+    output_dir.mkdir(exist_ok=True)
+    
+    # Generate plots
+    create_visualizations(result, output_dir)
+    
+    # Save summary stats
+    with open(output_dir / "summary.txt", "w") as f:
+        f.write(f"Benchmark: {result.benchmark_id}\n")
+        f.write(f"Total games: {result.fma['total_games']}\n")
+        f.write(f"Blue advantage: {result.fma['blue_advantage']:.1%}\n")
+    
+    return result
+
+# Use in benchmark script
+result = analyze_and_visualize(Path("benchmark_results/latest"))
+```
+
+## Export Options
+
+While PNG is the default format, you can save in other formats:
+
+```python
+import matplotlib.pyplot as plt
+
+# After creating a plot, save in multiple formats
+plt.savefig('plot.png', dpi=300, bbox_inches='tight')
+plt.savefig('plot.pdf', bbox_inches='tight')  # Vector format
+plt.savefig('plot.svg', bbox_inches='tight')  # Web format
+plt.close()
+```
+
+## Related
+
+- [Analysis Pipeline](/api/analysis/pipeline) - Generate AnalysisResult
+- [Metrics](/api/analysis/metrics) - Individual metric functions
+- [Benchmark](/guides/benchmarking) - Run benchmarks

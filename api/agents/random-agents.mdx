@@ -1,0 +1,262 @@
+---
+title: 'Random Agents'
+description: 'Simple random agents for testing game flow'
+---
+
+## Overview
+
+The random agents module provides basic implementations that make random decisions. These are primarily used for testing the game flow and validating game mechanics.
+
+<Warning>
+  Random agents are for testing purposes only. They do not implement any strategic logic and will not perform well in actual games.
+</Warning>
+
+---
+
+## RandomHintGiver
+
+Gives random hints for testing.
+
+### Constructor
+
+<ParamField path="team" type="Team" required>
+  The team this agent represents (Team.RED or Team.BLUE)
+</ParamField>
+
+```python
+from game import Team
+from agents.random_agents import RandomHintGiver
+
+hint_giver = RandomHintGiver(team=Team.BLUE)
+```
+
+### Methods
+
+#### give_hint()
+
+Generate a random hint.
+
+<ParamField path="my_words" type="List[str]" required>
+  List of unrevealed words belonging to this agent's team
+</ParamField>
+
+<ParamField path="opponent_words" type="List[str]" required>
+  List of unrevealed opponent words
+</ParamField>
+
+<ParamField path="neutral_words" type="List[str]" required>
+  List of unrevealed neutral words
+</ParamField>
+
+<ParamField path="bomb_words" type="List[str]" required>
+  List of bomb words (if not revealed)
+</ParamField>
+
+<ParamField path="revealed_words" type="List[str]" required>
+  List of already revealed words
+</ParamField>
+
+<ParamField path="board_words" type="List[str]" required>
+  All words on the board (for reference)
+</ParamField>
+
+**Returns:** `HintResponse` - Contains random hint word and count
+
+**Behavior:**
+- If no team words remain, returns `HintResponse(word="pass", count=1)`
+- Otherwise, generates a hint word in format `hint_{random_number}` where random_number is 1-100
+- Count is random between 1 and min(3, number of team words remaining)
+
+```python
+response = hint_giver.give_hint(
+    my_words=["whale", "dolphin", "shark"],
+    opponent_words=["cat", "dog"],
+    neutral_words=["table", "chair"],
+    bomb_words=["explosion"],
+    revealed_words=[],
+    board_words=["whale", "dolphin", "shark", "cat", "dog",
+                 "table", "chair", "explosion"]
+)
+# Example output: HintResponse(word="hint_42", count=2)
+```
+
+---
+
+## RandomGuesser
+
+Makes random guesses for testing.
+
+### Constructor
+
+<ParamField path="team" type="Team" required>
+  The team this agent represents (Team.RED or Team.BLUE)
+</ParamField>
+
+```python
+from game import Team
+from agents.random_agents import RandomGuesser
+
+guesser = RandomGuesser(team=Team.BLUE)
+```
+
+### Methods
+
+#### make_guesses()
+
+Make random guesses.
+
+<ParamField path="hint_word" type="str" required>
+  The hint word given by the hint giver
+</ParamField>
+
+<ParamField path="hint_count" type="int" required>
+  Number of words the hint relates to
+</ParamField>
+
+<ParamField path="board_words" type="List[str]" required>
+  All words on the board
+</ParamField>
+
+<ParamField path="revealed_words" type="List[str]" required>
+  List of already revealed words
+</ParamField>
+
+**Returns:** `List[str]` - List of randomly selected words to guess
+
+**Behavior:**
+- Filters out revealed words to get unrevealed words
+- If no unrevealed words remain, returns empty list
+- Otherwise, randomly samples up to `hint_count` words from unrevealed words
+- Does not consider the hint word or any strategy
+
+```python
+guesses = guesser.make_guesses(
+    hint_word="ocean",
+    hint_count=3,
+    board_words=["whale", "dolphin", "shark", "cat", "dog",
+                 "table", "chair", "explosion"],
+    revealed_words=["cat"]
+)
+# Example output: ["table", "whale", "dolphin"]
+# (random selection, ignores hint word)
+```
+
+#### process_result()
+
+Process guess results. Random agent does not learn from results.
+
+<ParamField path="guessed_word" type="str" required>
+  The word that was guessed
+</ParamField>
+
+<ParamField path="was_correct" type="bool" required>
+  Whether it was the team's word
+</ParamField>
+
+<ParamField path="color" type="CardColor" required>
+  The actual color of the word
+</ParamField>
+
+**Behavior:** Does nothing (empty implementation)
+
+```python
+from game import CardColor
+
+guesser.process_result(
+    guessed_word="whale",
+    was_correct=False,
+    color=CardColor.NEUTRAL
+)
+# No action taken
+```
+
+---
+
+## Example: Testing Game Flow
+
+```python
+from game import Game, Team
+from agents.random_agents import RandomHintGiver, RandomGuesser
+
+# Create random agents for both teams
+blue_hint_giver = RandomHintGiver(team=Team.BLUE)
+blue_guesser = RandomGuesser(team=Team.BLUE)
+red_hint_giver = RandomHintGiver(team=Team.RED)
+red_guesser = RandomGuesser(team=Team.RED)
+
+# Create and play game
+game = Game(
+    blue_hint_giver=blue_hint_giver,
+    blue_guesser=blue_guesser,
+    red_hint_giver=red_hint_giver,
+    red_guesser=red_guesser
+)
+
+result = game.play()
+print(f"Winner: {result.winner.value}")
+print(f"Turns: {result.num_turns}")
+print(f"Reason: {result.end_reason}")
+```
+
+## Example: Mixed Agent Testing
+
+```python
+from game import Game, Team
+from agents.random_agents import RandomHintGiver, RandomGuesser
+from agents.llm.baml_agents import BAMLHintGiver, BAMLGuesser, BAMLModel
+
+# Test LLM guesser with random hint giver
+blue_hint_giver = RandomHintGiver(team=Team.BLUE)
+blue_guesser = BAMLGuesser(team=Team.BLUE, model=BAMLModel.GPT4O_MINI)
+
+red_hint_giver = RandomHintGiver(team=Team.RED)
+red_guesser = RandomGuesser(team=Team.RED)
+
+game = Game(
+    blue_hint_giver=blue_hint_giver,
+    blue_guesser=blue_guesser,
+    red_hint_giver=red_hint_giver,
+    red_guesser=red_guesser
+)
+
+result = game.play()
+print(f"Testing LLM guesser with random hints")
+print(f"Result: {result.winner.value} wins")
+```
+
+---
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Game Flow Testing" icon="vial">
+    Validate that the game engine correctly handles turns, reveals, and win conditions
+  </Card>
+  <Card title="Baseline Performance" icon="chart-line">
+    Establish a baseline for comparing intelligent agent performance
+  </Card>
+  <Card title="Component Testing" icon="puzzle-piece">
+    Test individual components (hint giver or guesser) in isolation
+  </Card>
+  <Card title="Integration Testing" icon="network-wired">
+    Verify that different agent types can work together correctly
+  </Card>
+</CardGroup>
+
+---
+
+## Implementation Notes
+
+<Note>
+  The random agents use Python's `random` module:
+  - `random.randint(1, 100)` for hint word generation
+  - `random.randint(1, 3)` for hint count
+  - `random.sample()` for selecting guesses
+</Note>
+
+<Warning>
+  Random agents have no memory or learning capability:
+  - `process_result()` is a no-op
+  - No state is maintained between calls
+  - No `reset()` method needed (inherited default is sufficient)
+</Warning>

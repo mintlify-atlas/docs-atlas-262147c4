@@ -1,0 +1,453 @@
+---
+title: Model Selection
+description: Choose and configure AI models for your Codenames games
+icon: robot
+---
+
+## Available Models
+
+The benchmark supports models from multiple providers. All models are defined in the `BAMLModel` enum:
+
+```python
+from agents.llm import BAMLModel
+```
+
+## OpenAI Models
+
+### GPT-5 Series (Latest - December 2025)
+
+<CardGroup cols={2}>
+  <Card title="GPT-5" icon="star">
+    ```python
+    BAMLModel.GPT5
+    ```
+    Base GPT-5 model
+  </Card>
+  <Card title="GPT-5 Mini" icon="bolt">
+    ```python
+    BAMLModel.GPT5_MINI
+    ```
+    Faster, more affordable
+  </Card>
+  <Card title="GPT-5 Nano" icon="microchip">
+    ```python
+    BAMLModel.GPT5_NANO
+    ```
+    Ultra-fast, minimal cost
+  </Card>
+  <Card title="GPT-5.2 Instant" icon="clock">
+    ```python
+    BAMLModel.GPT5_CHAT
+    ```
+    gpt-5.2-chat-latest
+  </Card>
+</CardGroup>
+
+<Note>
+GPT-5 models require OPENAI_API_KEY in your .env file
+</Note>
+
+### GPT-4.1 Series
+
+```python
+BAMLModel.GPT41              # GPT-4.1
+BAMLModel.GPT41_MINI         # GPT-4.1 Mini
+BAMLModel.GPT41_NANO         # GPT-4.1 Nano
+```
+
+### Reasoning Models (o-series)
+
+```python
+BAMLModel.O4_MINI            # o4-mini
+BAMLModel.O3_MINI            # o3-mini
+BAMLModel.O3                 # o3
+BAMLModel.O1                 # o1
+BAMLModel.O1_MINI            # o1-mini
+BAMLModel.O1_PREVIEW         # o1-preview
+```
+
+<Warning>
+Reasoning models (o-series) require `temperature=1.0` and cannot use other temperature values.
+</Warning>
+
+### GPT-4o Series
+
+```python
+BAMLModel.GPT4O              # GPT-4o
+BAMLModel.GPT4O_MINI         # GPT-4o Mini (cost-effective)
+BAMLModel.GPT4O_20240806     # GPT-4o (2024-08-06)
+BAMLModel.GPT4O_MINI_20240718  # GPT-4o Mini (2024-07-18)
+```
+
+## Anthropic Claude Models
+
+### Claude 4.5 Series (Latest)
+
+<CardGroup cols={2}>
+  <Card title="Claude Sonnet 4.5" icon="brain">
+    ```python
+    BAMLModel.CLAUDE_SONNET_45
+    ```
+    1M context available, excellent performance
+  </Card>
+  <Card title="Claude Haiku 4.5" icon="bolt">
+    ```python
+    BAMLModel.CLAUDE_HAIKU_45
+    ```
+    Fast and affordable
+  </Card>
+</CardGroup>
+
+### Claude 4.x Series
+
+```python
+BAMLModel.CLAUDE_OPUS_41     # Claude Opus 4.1 (most capable)
+BAMLModel.CLAUDE_SONNET_4    # Claude Sonnet 4
+BAMLModel.CLAUDE_OPUS_4      # Claude Opus 4
+```
+
+### Claude 3.x Series (Legacy)
+
+```python
+BAMLModel.CLAUDE_SONNET_37   # Claude Sonnet 3.7
+BAMLModel.CLAUDE_HAIKU_35    # Claude Haiku 3.5
+BAMLModel.CLAUDE_HAIKU_3     # Claude 3 Haiku
+```
+
+<Note>
+Claude models require ANTHROPIC_API_KEY in your .env file
+</Note>
+
+## Google Gemini Models
+
+### Gemini 2.5 Series
+
+```python
+BAMLModel.GEMINI_25_PRO          # Gemini 2.5 Pro (most capable)
+BAMLModel.GEMINI_25_FLASH        # Gemini 2.5 Flash
+BAMLModel.GEMINI_25_FLASH_LITE   # Gemini 2.5 Flash Lite
+```
+
+### Gemini 2.0 Series
+
+```python
+BAMLModel.GEMINI_20_FLASH        # Gemini 2.0 Flash
+BAMLModel.GEMINI_20_FLASH_LITE   # Gemini 2.0 Flash Lite (fastest)
+```
+
+<Note>
+Gemini models require GOOGLE_API_KEY in your .env file
+</Note>
+
+## xAI Grok Models
+
+### Grok 4 Series
+
+```python
+BAMLModel.GROK4                      # Grok 4
+BAMLModel.GROK4_FAST_REASONING       # Grok 4 Fast Reasoning
+BAMLModel.GROK4_FAST_NON_REASONING   # Grok 4 Fast
+```
+
+### Grok 3 Series
+
+```python
+BAMLModel.GROK3              # Grok 3
+BAMLModel.GROK3_FAST         # Grok 3 Fast
+BAMLModel.GROK3_MINI         # Grok 3 Mini
+BAMLModel.GROK3_MINI_FAST    # Grok 3 Mini Fast
+```
+
+<Note>
+Grok models require XAI_API_KEY in your .env file
+</Note>
+
+## DeepSeek Models
+
+### DeepSeek V3.2 (December 2025)
+
+<CardGroup cols={2}>
+  <Card title="DeepSeek Chat" icon="comments">
+    ```python
+    BAMLModel.DEEPSEEK_CHAT
+    ```
+    Non-thinking mode, very cost-effective
+  </Card>
+  <Card title="DeepSeek Reasoner" icon="brain">
+    ```python
+    BAMLModel.DEEPSEEK_REASONER
+    ```
+    Thinking mode enabled
+  </Card>
+</CardGroup>
+
+<Note>
+DeepSeek models require DEEPSEEK_API_KEY in your .env file
+</Note>
+
+## OpenRouter Free Models
+
+These models are completely free via OpenRouter:
+
+```python
+BAMLModel.OPENROUTER_DEVSTRAL               # Devstral (Mistral)
+BAMLModel.OPENROUTER_MIMO_V2_FLASH          # MIMO V2 Flash
+BAMLModel.OPENROUTER_NEMOTRON_NANO          # Nemotron Nano 12B
+BAMLModel.OPENROUTER_DEEPSEEK_R1T_CHIMERA   # DeepSeek R1T Chimera
+BAMLModel.OPENROUTER_DEEPSEEK_R1T2_CHIMERA  # DeepSeek R1T2 Chimera
+BAMLModel.OPENROUTER_GLM_45_AIR             # GLM 4.5 Air
+BAMLModel.OPENROUTER_LLAMA_33_70B           # Llama 3.3 70B
+BAMLModel.OPENROUTER_OLMO3_32B              # OLMo 3.1 32B
+```
+
+<Info>
+Perfect for testing and experimentation at zero cost! Requires OPENROUTER_API_KEY.
+</Info>
+
+## Using Models in Code
+
+### Creating Agents
+
+<Tabs>
+  <Tab title="Hint Giver">
+    ```python
+    from game import Team
+    from agents.llm import BAMLHintGiver, BAMLModel
+    
+    hint_giver = BAMLHintGiver(
+        team=Team.BLUE,
+        model=BAMLModel.GPT5_MINI
+    )
+    ```
+  </Tab>
+  
+  <Tab title="Guesser">
+    ```python
+    from game import Team
+    from agents.llm import BAMLGuesser, BAMLModel
+    
+    guesser = BAMLGuesser(
+        team=Team.RED,
+        model=BAMLModel.CLAUDE_SONNET_45
+    )
+    ```
+  </Tab>
+  
+  <Tab title="Complete Setup">
+    ```python
+    from game import Team
+    from agents.llm import BAMLHintGiver, BAMLGuesser, BAMLModel
+    
+    # Blue team: GPT-5 Mini
+    blue_hint = BAMLHintGiver(Team.BLUE, BAMLModel.GPT5_MINI)
+    blue_guess = BAMLGuesser(Team.BLUE, BAMLModel.GPT5_MINI)
+    
+    # Red team: Claude Sonnet 4.5
+    red_hint = BAMLHintGiver(Team.RED, BAMLModel.CLAUDE_SONNET_45)
+    red_guess = BAMLGuesser(Team.RED, BAMLModel.CLAUDE_SONNET_45)
+    ```
+  </Tab>
+</Tabs>
+
+### Factory Functions
+
+Alternative approach using provider strings:
+
+```python
+from agents.llm import create_hint_giver, create_guesser
+from game import Team
+
+# Create by provider name
+hint_giver = create_hint_giver(
+    provider="openai",
+    model="gpt-4o",
+    team=Team.BLUE
+)
+
+guesser = create_guesser(
+    provider="anthropic",
+    team=Team.RED  # Uses default Claude model
+)
+```
+
+## Model Configuration
+
+Model-specific settings are centralized in `model_config.py`:
+
+### Temperature Settings
+
+```python
+from model_config import get_temperature, is_temperature_restricted
+
+# Get configured temperature for a model
+temp = get_temperature(BAMLModel.GPT5_MINI)  # Returns 0.7
+
+# Check if model has restrictions
+if is_temperature_restricted(BAMLModel.O3_MINI):
+    print("This model requires temperature=1.0")
+```
+
+### Display Names
+
+```python
+from model_config import get_model_display_name
+
+name = get_model_display_name(BAMLModel.GPT5_MINI)
+print(name)  # "GPT-5 Mini"
+```
+
+## Choosing Models for Benchmarks
+
+Edit `model_config.py` to select benchmark models:
+
+```python
+def get_benchmark_models() -> list:
+    """Get the list of models for benchmarking."""
+    return [
+        # Free models (recommended for testing)
+        BAMLModel.OPENROUTER_DEVSTRAL,
+        BAMLModel.OPENROUTER_MIMO_V2_FLASH,
+        
+        # Cost-effective options
+        BAMLModel.DEEPSEEK_CHAT,
+        BAMLModel.GEMINI_25_FLASH,
+        
+        # Premium models
+        BAMLModel.GPT5_MINI,
+        BAMLModel.CLAUDE_SONNET_45,
+    ]
+```
+
+## Mixing Models
+
+You can mix models from different providers in the same game:
+
+```python
+from orchestrator import GameRunner
+
+runner = GameRunner(
+    board=board,
+    # Blue team: OpenAI models
+    blue_hint_giver=BAMLHintGiver(Team.BLUE, BAMLModel.GPT5_MINI),
+    blue_guesser=BAMLGuesser(Team.BLUE, BAMLModel.GPT4O_MINI),
+    # Red team: Anthropic models
+    red_hint_giver=BAMLHintGiver(Team.RED, BAMLModel.CLAUDE_SONNET_45),
+    red_guesser=BAMLGuesser(Team.RED, BAMLModel.CLAUDE_HAIKU_45),
+    verbose=True
+)
+```
+
+<Info>
+Mixing models helps identify the best model for each role (hint giver vs guesser).
+</Info>
+
+## Performance Considerations
+
+### Speed vs Quality
+
+<Tabs>
+  <Tab title="Fastest">
+    Best for rapid iteration:
+    
+    ```python
+    BAMLModel.GPT5_NANO
+    BAMLModel.GEMINI_25_FLASH_LITE
+    BAMLModel.CLAUDE_HAIKU_45
+    BAMLModel.OPENROUTER_MIMO_V2_FLASH
+    ```
+  </Tab>
+  
+  <Tab title="Balanced">
+    Good speed and quality:
+    
+    ```python
+    BAMLModel.GPT5_MINI
+    BAMLModel.GPT4O_MINI
+    BAMLModel.GEMINI_25_FLASH
+    BAMLModel.DEEPSEEK_CHAT
+    ```
+  </Tab>
+  
+  <Tab title="Best Quality">
+    Maximum performance:
+    
+    ```python
+    BAMLModel.GPT5
+    BAMLModel.CLAUDE_OPUS_41
+    BAMLModel.GEMINI_25_PRO
+    BAMLModel.O3
+    ```
+  </Tab>
+</Tabs>
+
+### Role-Specific Recommendations
+
+<CardGroup cols={2}>
+  <Card title="Hint Givers" icon="lightbulb">
+    Benefit from reasoning capability:
+    - O-series models (O3, O4_MINI)
+    - DeepSeek Reasoner
+    - Claude Opus models
+  </Card>
+  <Card title="Guessers" icon="bullseye">
+    Benefit from speed:
+    - Fast/Mini variants
+    - Haiku models
+    - Flash Lite models
+  </Card>
+</CardGroup>
+
+## API Key Setup
+
+Add required API keys to your `.env` file:
+
+```bash
+# OpenAI (GPT-5, GPT-4, o-series)
+OPENAI_API_KEY=sk-...
+
+# Anthropic (Claude)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Google (Gemini)
+GOOGLE_API_KEY=AIza...
+
+# xAI (Grok)
+XAI_API_KEY=xai-...
+
+# DeepSeek
+DEEPSEEK_API_KEY=sk-...
+
+# OpenRouter (free models)
+OPENROUTER_API_KEY=sk-or-...
+```
+
+<Note>
+You only need API keys for the providers you plan to use.
+</Note>
+
+## Model Availability
+
+<Warning>
+Model information current as of December 2025. Check provider documentation for:
+- Latest model releases
+- Deprecated models
+- Regional availability
+- Updated pricing
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Running Games" icon="play" href="/guides/running-games">
+    Use your selected models in games
+  </Card>
+  <Card title="Cost Management" icon="dollar-sign" href="/guides/cost-management">
+    Compare costs across models
+  </Card>
+  <Card title="Benchmarking" icon="chart-line" href="/guides/benchmarking">
+    Evaluate model performance
+  </Card>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Customize model behavior
+  </Card>
+</CardGroup>

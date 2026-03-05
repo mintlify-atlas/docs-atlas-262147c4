@@ -1,0 +1,588 @@
+---
+title: 'BAML Integration'
+description: 'How BAML enables type-safe LLM interactions and declarative prompt engineering'
+icon: 'brackets-curly'
+---
+
+## What is BAML?
+
+**BAML** (Basically A Made-up Language) is a domain-specific language for building reliable AI applications. It provides:
+
+- **Type-safe structured outputs** from LLMs
+- **Declarative prompt templates** separate from Python code
+- **Multi-provider support** with a single interface
+- **Automatic retry logic** for malformed responses
+- **Interactive playground** for testing prompts
+
+<Info>
+Learn more at [boundaryml.com](https://boundaryml.com) or the [BAML documentation](https://docs.boundaryml.com).
+</Info>
+
+## Why BAML for Codenames?
+
+This benchmark uses BAML instead of direct API calls or other LLM frameworks for several key reasons:
+
+<CardGroup cols={2}>
+  <Card title="Guaranteed Structure" icon="shield-check">
+    LLMs sometimes return malformed JSON or extra text. BAML automatically validates and retries to ensure you always get valid `HintResponse` or `GuessResponse` objects.
+  </Card>
+  
+  <Card title="Provider Agnostic" icon="layer-group">
+    Write agent logic once, run on 50+ models across OpenAI, Anthropic, Google, DeepSeek, Grok, and more. Switch providers by changing a single line.
+  </Card>
+  
+  <Card title="Prompt Engineering" icon="wrench">
+    Edit prompts in `.baml` files with syntax highlighting and templates. Test changes in the interactive playground before running expensive benchmarks.
+  </Card>
+  
+  <Card title="Type Safety" icon="code">
+    BAML generates Python types from schemas. Your IDE autocompletes fields, and type checkers catch errors at development time.
+  </Card>
+</CardGroup>
+
+## Architecture Overview
+
+The BAML system has three main components:
+
+```
+baml_src/
+├── main.baml          # Functions and schemas
+├── clients.baml       # LLM provider configurations
+└── generators.baml    # Python client generation config
+
+baml_client/           # Generated Python client (do not edit)
+└── baml_client/
+    └── sync_client.py # Import `b` from here
+```
+
+### Component Roles
+
+| File | Purpose |
+|------|----------|
+| `main.baml` | Defines AI functions (`GiveHint`, `MakeGuesses`) and response types |
+| `clients.baml` | Configures LLM providers (API keys, models, retry policies) |
+| `generators.baml` | Specifies Python as target language for code generation |
+| `baml_client/` | Generated Python code—import and use, never edit manually |
+
+## Schema Definitions
+
+BAML schemas define the structure of LLM outputs. Here's how the Codenames responses are defined:
+
+### HintResponse Schema
+
+```baml baml_src/main.baml
+class HintResponse {
+  word string @description("One-word hint (no spaces, not on the board)")
+  count int @description("Number of words this hint relates to (1-9)")
+  reasoning string @description("Brief explanation of strategy and word associations")
+}
+```
+
+This generates a Python class that BAML populates from LLM output:
+
+```python
+# Usage in Python
+response: HintResponse = b.GiveHint(...)
+print(response.word)      # Type: str
+print(response.count)     # Type: int
+print(response.reasoning) # Type: str
+```
+
+### GuessResponse Schema
+
+```baml baml_src/main.baml
+class GuessResponse {
+  guesses string[] @description("List of words to guess, ordered by confidence")
+  reasoning string @description("Brief explanation of why these words relate")
+}
+```
+
+Arrays in BAML map to Python lists:
+
+```python
+# Usage in Python
+response: GuessResponse = b.MakeGuesses(...)
+for guess in response.guesses:  # Type: List[str]
+    print(guess)
+```
+
+<Tip>
+The `@description` annotations are included in the prompt sent to the LLM, helping it understand what to generate.
+</Tip>
+
+## Function Definitions
+
+BAML functions represent calls to LLMs. They specify inputs, outputs, and prompts.
+
+### GiveHint Function
+
+The HintGiver agent uses the `GiveHint` function:
+
+```baml baml_src/main.baml
+function GiveHint(
+  team: string @description("Team color: 'blue' or 'red'"),
+  my_words: string[] @description("Your team's unrevealed words"),
+  opponent_words: string[] @description("Opponent's unrevealed words to avoid"),
+  neutral_words: string[] @description("Neutral unrevealed words to avoid"),
+  bomb_words: string[] @description("The bomb word(s) - NEVER hint at these!"),
+  revealed_words: string[] @description("Already revealed words (for context)")
+) -> HintResponse {
+  client GPT4oMini  // Default client
+
+  prompt #"
+    You are playing Codenames as the {{ team | upper }} team's spymaster.
+
+    YOUR GOAL: Give a one-word hint and a number to help your teammate.
+
+    YOUR TEAM'S WORDS:
+    {{ my_words | join(', ') }}
+
+    OPPONENT'S WORDS (avoid these):
+    {{ opponent_words | join(', ') }}
+
+    NEUTRAL WORDS (avoid these):
+    {{ neutral_words | join(', ') }}
+
+    BOMB WORD(S) (NEVER hint at these):
+    {{ bomb_words | join(', ') }}
+
+    {% if revealed_words | length > 0 %}
+    ALREADY REVEALED:
+    {{ revealed_words | join(', ') }}
+    {% endif %}
+
+    RULES:
+    1. Give a ONE-WORD hint (no spaces, no words from the board)
+    2. Give a NUMBER indicating how many of your words relate to this hint
+    3. Your hint should connect multiple of your words if possible
+    4. Avoid hints that could lead to opponent words, neutral words, or BOMB(S)
+
+    {{ ctx.output_format }}
+  "#
+}
+```
+
+#### Prompt Template Features
+
+<AccordionGroup>
+  <Accordion title="Jinja2 Templating" icon="brackets-curly">
+    BAML uses Jinja2 syntax for dynamic content:
+    
+    ```baml
+    {{ team | upper }}              # String filter
+    {{ my_words | join(', ') }}     # Array to comma-separated string
+    {% if revealed_words | length > 0 %}  # Conditional blocks
+      ...
+    {% endif %}
+    ```
+  </Accordion>
+  
+  <Accordion title="ctx.output_format" icon="file-code">
+    `{{ ctx.output_format }}` is automatically replaced with JSON schema instructions:
+    
+    ```
+    Return your response in JSON format:
+    {
+      "word": "string",
+      "count": 0,
+      "reasoning": "string"
+    }
+    ```
+    
+    This ensures the LLM knows exactly what structure to return.
+  </Accordion>
+  
+  <Accordion title="Multi-line Strings" icon="align-left">
+    Use `#"..."#` for multi-line prompts. This is similar to raw strings in Python and avoids escaping issues.
+  </Accordion>
+</AccordionGroup>
+
+### MakeGuesses Function
+
+The Guesser agent uses the `MakeGuesses` function:
+
+```baml baml_src/main.baml
+function MakeGuesses(
+  team: string @description("Team color: 'blue' or 'red'"),
+  hint_word: string @description("The hint word given by your spymaster"),
+  hint_count: int @description("Number of words the hint relates to"),
+  board_words: string[] @description("All words currently on the board"),
+  revealed_words: string[] @description("Already revealed words (don't guess these)")
+) -> GuessResponse {
+  client GPT4oMini
+
+  prompt #"
+    You are playing Codenames as the {{ team | upper }} team's field operative.
+
+    YOUR HINT: "{{ hint_word }}" ({{ hint_count }})
+
+    WORDS ON THE BOARD (unrevealed):
+    {% for word in board_words if word not in revealed_words %}{{ word }}{% if not loop.last %}, {% endif %}{% endfor %}
+
+    YOUR TASK:
+    1. Identify which unrevealed words relate to "{{ hint_word }}"
+    2. Return up to {{ hint_count }} words (you can guess fewer if unsure)
+    3. Order them by confidence (most confident first)
+
+    IMPORTANT:
+    - Only guess words from the unrevealed list above
+    - If you guess wrong, your turn ends immediately
+    - Be thoughtful - quality over quantity
+
+    {{ ctx.output_format }}
+  "#
+}
+```
+
+## Client Configuration
+
+Clients in BAML represent LLM providers and models. They're defined in `clients.baml`:
+
+```baml baml_src/clients.baml
+client GPT4oMini {
+  provider openai
+  options {
+    model "gpt-4o-mini"
+    api_key env.OPENAI_API_KEY
+    temperature 0.7
+  }
+}
+
+client ClaudeSonnet45 {
+  provider anthropic
+  options {
+    model "claude-sonnet-4-5-20250929"
+    api_key env.ANTHROPIC_API_KEY
+    temperature 0.7
+  }
+}
+
+client Gemini25Flash {
+  provider google-ai
+  options {
+    model "gemini-2.5-flash"
+    api_key env.GOOGLE_API_KEY
+    temperature 0.7
+  }
+}
+```
+
+### Runtime Client Override
+
+You can override the default client at runtime using `ClientRegistry`:
+
+```python agents/llm/baml_agents.py
+from baml_client.baml_client.sync_client import b
+from baml_py import ClientRegistry
+
+# Create and configure registry
+registry = ClientRegistry()
+registry.set_primary("ClaudeSonnet45")  # Override default
+
+# Pass registry to BAML function
+response = b.GiveHint(
+    team="blue",
+    my_words=["dog", "cat"],
+    opponent_words=["house"],
+    neutral_words=["tree"],
+    bomb_words=["bomb"],
+    revealed_words=[],
+    baml_options={"client_registry": registry}
+)
+```
+
+This is how `BAMLHintGiver` and `BAMLGuesser` support multiple models:
+
+```python agents/llm/baml_agents.py
+class BAMLHintGiver(HintGiver):
+    def __init__(self, team: Team, model: BAMLModel = BAMLModel.GPT4O_MINI):
+        super().__init__(team)
+        self.model = model
+        self._registry = ClientRegistry()
+        self._registry.set_primary(model.value)  # e.g., "GPT4oMini"
+    
+    def give_hint(self, ...) -> HintResponse:
+        baml_response = b.GiveHint(
+            ...,
+            baml_options={"client_registry": self._registry}
+        )
+        return HintResponse(word=baml_response.word, count=baml_response.count)
+```
+
+## Using BAML in Python
+
+### Step 1: Import the Client
+
+```python
+from baml_client.baml_client.sync_client import b
+```
+
+The `b` object provides access to all BAML functions defined in `main.baml`.
+
+### Step 2: Call BAML Functions
+
+```python
+from baml_py import ClientRegistry
+
+# Optional: override default client
+registry = ClientRegistry()
+registry.set_primary("GPT4oMini")
+
+# Call GiveHint function
+response = b.GiveHint(
+    team="blue",
+    my_words=["dog", "cat", "lion"],
+    opponent_words=["house", "car"],
+    neutral_words=["tree", "cloud"],
+    bomb_words=["bomb"],
+    revealed_words=[],
+    baml_options={"client_registry": registry}
+)
+
+print(f"Hint: {response.word} ({response.count})")
+print(f"Reasoning: {response.reasoning}")
+```
+
+### Step 3: Handle Responses
+
+BAML returns validated objects:
+
+```python
+# HintResponse is automatically validated
+assert isinstance(response.word, str)
+assert isinstance(response.count, int)
+assert response.count >= 1
+
+# Use the response
+hint_response = HintResponse(
+    word=response.word,
+    count=response.count
+)
+```
+
+<Warning>
+If the LLM returns invalid data that can't be coerced to the schema, BAML will retry automatically (configured in `clients.baml`). If all retries fail, it raises an exception.
+</Warning>
+
+## Interactive Playground
+
+BAML includes a browser-based playground for testing prompts:
+
+```bash
+baml serve
+```
+
+This opens `http://localhost:5173` with an interactive UI where you can:
+
+<Steps>
+  <Step title="Select a Function">
+    Choose `GiveHint` or `MakeGuesses` from the sidebar
+  </Step>
+  
+  <Step title="Fill in Test Data">
+    Enter sample inputs (word lists, hints, etc.)
+  </Step>
+  
+  <Step title="Run and Inspect">
+    Execute the function and see:
+    - Raw LLM response
+    - Parsed structured output
+    - Token usage and cost
+    - Response time
+  </Step>
+  
+  <Step title="Iterate on Prompts">
+    Edit the prompt in `main.baml`, save, and the playground auto-reloads
+  </Step>
+</Steps>
+
+<CardGroup cols={2}>
+  <Card title="Fast Iteration" icon="forward">
+    Test prompt changes instantly without running full benchmarks
+  </Card>
+  
+  <Card title="Cost Estimation" icon="dollar-sign">
+    See token usage and costs before spending on benchmarks
+  </Card>
+  
+  <Card title="Error Debugging" icon="bug">
+    Identify why an LLM is returning invalid outputs
+  </Card>
+  
+  <Card title="Multi-Model Testing" icon="layer-group">
+    Compare how different models respond to the same prompt
+  </Card>
+</CardGroup>
+
+## Regenerating the Client
+
+After editing `.baml` files, regenerate the Python client:
+
+```bash
+baml generate
+```
+
+This updates `baml_client/` with:
+- Type definitions for schemas
+- Function signatures for BAML functions
+- Client registry mappings
+
+<Note>
+**Never edit files in `baml_client/` manually.** All changes should be made in `baml_src/`, then regenerated.
+</Note>
+
+## Prompt Engineering Tips
+
+Here are strategies for improving prompt performance in this benchmark:
+
+### For HintGiver Prompts
+
+<AccordionGroup>
+  <Accordion title="Emphasize Risk" icon="triangle-exclamation">
+    Make the consequences of hitting the bomb crystal clear:
+    
+    ```baml
+    BOMB WORD(S) (NEVER hint at these or YOUR TEAM LOSES INSTANTLY):
+    {{ bomb_words | join(', ') }}
+    ```
+  </Accordion>
+  
+  <Accordion title="Encourage Clustering" icon="object-group">
+    Guide the model toward multi-word hints:
+    
+    ```baml
+    STRATEGY:
+    - Try to connect 2-3 of your words with a single hint
+    - Look for semantic relationships: categories, synonyms, associations
+    - Higher counts win games faster, but be careful not to include risky words
+    ```
+  </Accordion>
+  
+  <Accordion title="Add Examples" icon="lightbulb">
+    Few-shot prompting can improve performance:
+    
+    ```baml
+    EXAMPLES:
+    - If your words are ["dog", "cat", "mouse"], hint: "animal" (3)
+    - If your words are ["king", "queen", "crown"], hint: "royalty" (3)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### For Guesser Prompts
+
+<AccordionGroup>
+  <Accordion title="Discourage Over-Guessing" icon="hand">
+    Remind the model that wrong guesses end the turn:
+    
+    ```baml
+    IMPORTANT:
+    - Your turn ends IMMEDIATELY if you guess wrong
+    - It's better to guess fewer words confidently than to risk a wrong guess
+    - If you're unsure about a word, leave it out
+    ```
+  </Accordion>
+  
+  <Accordion title="Request Confidence Ordering" icon="arrow-down-1-9">
+    Make sure guesses are ordered by confidence:
+    
+    ```baml
+    Return guesses in order of confidence:
+    1. Most confident guess first
+    2. Second most confident
+    3. Least confident (if applicable)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Error Handling
+
+BAML provides structured error handling:
+
+```python
+from baml_py import BamlValidationError
+
+try:
+    response = b.GiveHint(...)
+except BamlValidationError as e:
+    print(f"LLM returned invalid data: {e}")
+    # BAML already retried automatically
+    # This error means all retries failed
+except Exception as e:
+    print(f"Unexpected error: {e}")
+```
+
+Common error scenarios:
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `BamlValidationError` | LLM output doesn't match schema | Improve prompt clarity or adjust schema |
+| `ClientNotFound` | Invalid client name in registry | Check spelling of client name |
+| `TimeoutError` | LLM took too long | Increase timeout in `clients.baml` |
+| `AuthenticationError` | Invalid API key | Verify `env.OPENAI_API_KEY` etc. in `.env` |
+
+## Advanced Features
+
+### Retry Policies
+
+Configure automatic retries in `clients.baml`:
+
+```baml
+client GPT4oMini {
+  provider openai
+  options {
+    model "gpt-4o-mini"
+    api_key env.OPENAI_API_KEY
+    temperature 0.7
+  }
+  retry_policy {
+    max_retries 3
+    strategy exponential_backoff
+  }
+}
+```
+
+### Type Coercion
+
+BAML attempts to coerce LLM outputs to match schemas:
+
+```baml
+class HintResponse {
+  word string
+  count int  // If LLM returns "2", BAML converts to 2
+}
+```
+
+Coercion examples:
+- `"2"` → `2` (string to int)
+- `2.7` → `2` (float to int)
+- `true` → `"true"` (bool to string)
+
+### Enums
+
+BAML supports enums for constrained outputs:
+
+```baml
+enum Confidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+class GuessResponse {
+  guesses string[]
+  confidence Confidence
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Running Benchmarks" icon="chart-line" href="/guides/benchmarking">
+    Start benchmarking different models with your customized prompts
+  </Card>
+  
+  <Card title="BAML Documentation" icon="book" href="https://docs.boundaryml.com">
+    Deep dive into BAML's full feature set and advanced patterns
+  </Card>
+</CardGroup>

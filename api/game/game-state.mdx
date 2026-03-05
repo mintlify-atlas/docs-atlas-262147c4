@@ -1,0 +1,390 @@
+---
+title: 'GameState'
+description: 'Manages the state and flow of a Codenames game'
+---
+
+## Overview
+
+The `GameState` class manages the complete state of a Codenames game, including turn management, word reveals, win condition checking, and game history. It works with a `Board` instance to track game progression.
+
+## Constructor
+
+### `GameState(board)`
+
+Initialize game state with a board.
+
+<ParamField path="board" type="Board" required>
+  The Board instance for this game. The starting team is determined from `board.config.STARTING_TEAM`.
+</ParamField>
+
+```python
+from game import Board, GameState
+
+words = ["apple", "banana", "car", ...]  # 25 words
+board = Board(words, seed=42)
+game = GameState(board)
+
+print(game.current_team)  # Team.BLUE or Team.RED
+print(game.turn_number)   # 0
+```
+
+## Properties
+
+### `board`
+
+Get the game board.
+
+<ResponseField name="return" type="Board">
+  The Board instance associated with this game.
+</ResponseField>
+
+```python
+board = game.board
+all_words = board.all_words
+```
+
+### `current_team`
+
+Get the team whose turn it is.
+
+<ResponseField name="return" type="Team">
+  The Team enum value (Team.RED or Team.BLUE).
+</ResponseField>
+
+```python
+team = game.current_team
+print(f"It's {team.value}'s turn")  # "It's blue's turn"
+```
+
+### `revealed_words`
+
+Get set of revealed words.
+
+<ResponseField name="return" type="Set[str]">
+  Immutable copy of revealed words set.
+</ResponseField>
+
+```python
+revealed = game.revealed_words
+print(f"{len(revealed)} words have been revealed")
+```
+
+### `unrevealed_words`
+
+Get list of unrevealed words.
+
+<ResponseField name="return" type="List[str]">
+  List of words that haven't been revealed yet.
+</ResponseField>
+
+```python
+available_words = game.unrevealed_words
+print(f"{len(available_words)} words remaining on board")
+```
+
+### `turn_history`
+
+Get history of all completed turns.
+
+<ResponseField name="return" type="List[Turn]">
+  Copy of the turn history list.
+</ResponseField>
+
+```python
+for turn in game.turn_history:
+    print(f"Turn {turn.turn_number}: {turn.hint_word} ({turn.hint_count})")
+    for guess in turn.guesses:
+        print(f"  - {guess.word}: {guess.correct}")
+```
+
+### `game_outcome`
+
+Get current game outcome.
+
+<ResponseField name="return" type="GameOutcome">
+  GameOutcome enum value (IN_PROGRESS, RED_WIN, or BLUE_WIN).
+</ResponseField>
+
+```python
+from game import GameOutcome
+
+if game.game_outcome == GameOutcome.BLUE_WIN:
+    print("Blue team wins!")
+elif game.game_outcome == GameOutcome.RED_WIN:
+    print("Red team wins!")
+else:
+    print("Game in progress...")
+```
+
+### `is_game_over`
+
+Check if game is over.
+
+<ResponseField name="return" type="bool">
+  True if game has ended, False if still in progress.
+</ResponseField>
+
+```python
+if game.is_game_over:
+    print(f"Game ended: {game.game_outcome.value}")
+else:
+    print("Game still in progress")
+```
+
+### `turn_number`
+
+Get current turn number.
+
+<ResponseField name="return" type="int">
+  The current turn number (starts at 0, increments when turn starts).
+</ResponseField>
+
+```python
+print(f"Turn {game.turn_number}")
+```
+
+## Turn Management Methods
+
+### `start_turn(hint_word, hint_count)`
+
+Start a new turn with a hint from the spymaster.
+
+<ParamField path="hint_word" type="str" required>
+  The hint word given by the spymaster (will be normalized to lowercase).
+</ParamField>
+
+<ParamField path="hint_count" type="int" required>
+  Number of words the hint relates to.
+</ParamField>
+
+<ResponseField name="raises" type="ValueError">
+  Raised if game is over or if a turn is already in progress.
+</ResponseField>
+
+```python
+# Spymaster gives hint
+game.start_turn("fruit", 2)
+print(f"Hint: fruit (2)")
+```
+
+### `make_guess(word)`
+
+Make a guess for the current team.
+
+<ParamField path="word" type="str" required>
+  The word being guessed (case-insensitive).
+</ParamField>
+
+<ResponseField name="return" type="TurnResult">
+  TurnResult object containing word, color, correctness, and bomb status.
+</ResponseField>
+
+<ResponseField name="raises" type="ValueError">
+  Raised if no turn is in progress, word is not on board, or word is already revealed.
+</ResponseField>
+
+```python
+# Make guesses
+result = game.make_guess("apple")
+if result.correct:
+    print(f"Correct! {result.word} is {result.color.value}")
+elif result.hit_bomb:
+    print(f"BOMB! Game over.")
+else:
+    print(f"Wrong. {result.word} is {result.color.value}")
+
+# Check game state after guess
+if game.is_game_over:
+    print(f"Game ended: {game.game_outcome.value}")
+```
+
+### `end_turn()`
+
+End the current turn and switch teams.
+
+<ResponseField name="raises" type="ValueError">
+  Raised if no turn is in progress.
+</ResponseField>
+
+```python
+# End turn after guesses
+game.end_turn()
+print(f"Now it's {game.current_team.value}'s turn")
+```
+
+### `cancel_turn()`
+
+Cancel the current turn without adding it to history.
+
+Used when a turn needs to be discarded due to errors during retry logic. This resets the turn state so `start_turn()` can be called again.
+
+```python
+try:
+    game.start_turn("invalid", 1)
+    # Something goes wrong...
+    game.cancel_turn()  # Reset and try again
+except Exception as e:
+    game.cancel_turn()
+    print(f"Turn cancelled due to error: {e}")
+```
+
+### `record_invalid_guess(word, reason)`
+
+Record an invalid guess for the current turn.
+
+<ParamField path="word" type="str" required>
+  The invalid guess word.
+</ParamField>
+
+<ParamField path="reason" type="str" required>
+  Reason why the guess was invalid (e.g., "off-board", "already revealed").
+</ParamField>
+
+<ResponseField name="raises" type="ValueError">
+  Raised if no turn is in progress.
+</ResponseField>
+
+```python
+# Record invalid guess attempt
+game.record_invalid_guess("notaword", "word not on board")
+```
+
+## Query Methods
+
+### `get_remaining_words(team)`
+
+Get remaining unrevealed words for a team.
+
+<ParamField path="team" type="Team" required>
+  The team to get remaining words for (Team.RED or Team.BLUE).
+</ParamField>
+
+<ResponseField name="return" type="List[str]">
+  List of unrevealed words belonging to the specified team.
+</ResponseField>
+
+```python
+from game import Team
+
+blue_remaining = game.get_remaining_words(Team.BLUE)
+red_remaining = game.get_remaining_words(Team.RED)
+
+print(f"Blue has {len(blue_remaining)} words left")
+print(f"Red has {len(red_remaining)} words left")
+```
+
+### `get_team_scores()`
+
+Get remaining word counts for both teams.
+
+<ResponseField name="return" type="Tuple[int, int]">
+  Tuple of (blue_remaining, red_remaining) word counts.
+</ResponseField>
+
+```python
+blue_score, red_score = game.get_team_scores()
+print(f"Score - Blue: {blue_score}, Red: {red_score}")
+```
+
+### `get_snapshot()`
+
+Get JSON-serializable snapshot of game state.
+
+<ResponseField name="return" type="dict">
+  Dictionary containing complete game state including turn history, revealed words, scores, and outcome.
+</ResponseField>
+
+```python
+import json
+
+snapshot = game.get_snapshot()
+print(json.dumps(snapshot, indent=2))
+
+# Snapshot structure:
+# {
+#   "turn_number": 3,
+#   "current_team": "blue",
+#   "revealed_words": ["apple", "banana", ...],
+#   "game_outcome": "in_progress",
+#   "team_scores": [7, 6],
+#   "turn_history": [
+#     {
+#       "team": "blue",
+#       "turn_number": 1,
+#       "hint_word": "fruit",
+#       "hint_count": 2,
+#       "guesses": [...],
+#       "invalid_guess_word": null,
+#       "invalid_guess_reason": null
+#     },
+#     ...
+#   ]
+# }
+```
+
+### `print_status()`
+
+Log current game status to console.
+
+```python
+game.print_status()
+# Outputs:
+# ============================================================
+# GAME STATUS - Turn 3
+# ============================================================
+# Current Team: BLUE
+# Blue Remaining: 7 | Red Remaining: 6
+# Outcome: in_progress
+# Revealed: 12/25 words
+# ...
+```
+
+## Complete Game Example
+
+```python
+from game import Board, GameState, Team, GameOutcome, CardColor
+
+# Setup
+words = ["apple", "banana", "car", ...]  # 25 words
+board = Board(words, seed=42)
+game = GameState(board)
+
+# Turn 1: Blue team
+game.start_turn("fruit", 2)
+result = game.make_guess("apple")
+if result.correct:
+    print(f"Correct! {result.word}")
+
+result = game.make_guess("banana")
+if result.correct:
+    print(f"Correct! {result.word}")
+
+# Optional: make one more guess
+result = game.make_guess("grape")
+if not result.correct:
+    print(f"Wrong! {result.word} is {result.color.value}")
+
+game.end_turn()
+
+# Turn 2: Red team
+print(f"Now {game.current_team.value}'s turn")
+game.start_turn("vehicle", 1)
+result = game.make_guess("car")
+
+if result.hit_bomb:
+    print("BOMB! Game over!")
+    print(f"Winner: {game.game_outcome.value}")
+else:
+    game.end_turn()
+
+# Check progress
+blue_score, red_score = game.get_team_scores()
+print(f"Score - Blue: {blue_score}, Red: {red_score}")
+
+# Game loop continues until game is over
+while not game.is_game_over:
+    # ... continue gameplay
+    pass
+
+print(f"Final outcome: {game.game_outcome.value}")
+```

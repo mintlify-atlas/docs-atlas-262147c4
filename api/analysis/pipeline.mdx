@@ -1,0 +1,275 @@
+---
+title: 'Analysis Pipeline'
+description: 'Orchestrates comprehensive benchmark analysis'
+icon: 'chart-line'
+---
+
+## Overview
+
+The analysis pipeline provides a unified interface for running all benchmark metrics and analysis functions. It processes game results and generates comprehensive statistics including win rates, Elo ratings, efficiency metrics, error patterns, and more.
+
+## Classes
+
+### AnalysisResult
+
+Complete analysis results containing all computed metrics and statistics.
+
+<ParamField path="benchmark_id" type="str" required>
+  Identifier for the benchmark being analyzed
+</ParamField>
+
+<ParamField path="combo_df" type="pd.DataFrame" required>
+  Team combination statistics with win rates and game counts
+</ParamField>
+
+<ParamField path="role_perf_df" type="pd.DataFrame" required>
+  Model performance aggregated by role (hint giver/guesser)
+</ParamField>
+
+<ParamField path="model_perf_df" type="pd.DataFrame" required>
+  Individual model performance metrics
+</ParamField>
+
+<ParamField path="elo_df" type="pd.DataFrame" required>
+  Elo ratings for each model by role
+</ParamField>
+
+<ParamField path="ci_df" type="pd.DataFrame" required>
+  Wilson confidence intervals for win rates
+</ParamField>
+
+<ParamField path="fma" type="dict" required>
+  First mover advantage statistics
+</ParamField>
+
+<ParamField path="momentum_df" type="pd.DataFrame" required>
+  Game momentum and competitiveness metrics
+</ParamField>
+
+<ParamField path="momentum_summary" type="dict" required>
+  Aggregated momentum statistics
+</ParamField>
+
+<ParamField path="top_hint" type="pd.DataFrame" required>
+  Best performing hint givers
+</ParamField>
+
+<ParamField path="top_guess" type="pd.DataFrame" required>
+  Best performing guessers
+</ParamField>
+
+<ParamField path="dominant" type="pd.DataFrame" required>
+  Dominant team combinations
+</ParamField>
+
+<ParamField path="synergies" type="pd.DataFrame" required>
+  Model synergy analysis (best pairings)
+</ParamField>
+
+<ParamField path="hint_efficiency" type="pd.DataFrame" required>
+  Hint giver efficiency metrics
+</ParamField>
+
+<ParamField path="guesser_perf" type="pd.DataFrame" required>
+  Detailed guesser performance metrics
+</ParamField>
+
+<ParamField path="role_versatility" type="pd.DataFrame" required>
+  Model versatility across roles
+</ParamField>
+
+<ParamField path="error_summary" type="pd.DataFrame" required>
+  Error counts by model and type
+</ParamField>
+
+<ParamField path="error_patterns" type="dict" required>
+  Detailed error pattern analysis
+</ParamField>
+
+<ParamField path="hint_patterns" type="dict" required>
+  Hint word patterns and statistics
+</ParamField>
+
+<ParamField path="game_efficiency" type="pd.DataFrame" required>
+  Game efficiency by team combination
+</ParamField>
+
+<ParamField path="efficiency_by_model" type="pd.DataFrame" required>
+  Efficiency aggregated by model
+</ParamField>
+
+<ParamField path="matchup_matrix_hg" type="tuple[pd.DataFrame, pd.DataFrame]" required>
+  Head-to-head matchup matrix for hint givers (win rates, game counts)
+</ParamField>
+
+<ParamField path="matchup_matrix_g" type="tuple[pd.DataFrame, pd.DataFrame]" required>
+  Head-to-head matchup matrix for guessers (win rates, game counts)
+</ParamField>
+
+## Functions
+
+### run_pipeline()
+
+Run the complete analysis pipeline on benchmark results.
+
+```python
+def run_pipeline(results_path: Path) -> AnalysisResult
+```
+
+<ParamField path="results_path" type="Path" required>
+  Path to benchmark results directory containing game snapshots
+</ParamField>
+
+**Returns:** `AnalysisResult` containing all computed metrics and statistics.
+
+## Usage Example
+
+```python
+from pathlib import Path
+from analysis.pipeline import run_pipeline
+from analysis.viz import create_visualizations
+
+# Run full analysis pipeline
+results_path = Path("benchmark_results/my_benchmark")
+result = run_pipeline(results_path)
+
+# Access specific metrics
+print(f"Benchmark ID: {result.benchmark_id}")
+print(f"\nTop 5 Hint Givers:")
+print(result.top_hint.head())
+
+print(f"\nTop 5 Guessers:")
+print(result.top_guess.head())
+
+print(f"\nElo Ratings:")
+print(result.elo_df.head(10))
+
+print(f"\nFirst Mover Advantage:")
+print(f"  Blue win rate: {result.fma['overall_blue_win_rate']:.1%}")
+print(f"  Blue advantage: {result.fma['blue_advantage']:.1%}")
+
+# Generate visualizations
+output_dir = Path("analysis_output")
+create_visualizations(result, output_dir)
+```
+
+## Pipeline Stages
+
+The pipeline executes the following analysis stages:
+
+### 1. Data Loading
+
+Loads and parses benchmark results from disk.
+
+### 2. Win Rate Analysis
+
+- Team combination statistics
+- Role-based performance
+- First mover advantage
+- Best hint givers and guessers
+- Dominant combinations
+- Model synergies
+
+### 3. Elo Rating Computation
+
+Calculates Elo ratings for each model in hint giver and guesser roles.
+
+### 4. Confidence Intervals
+
+Computes Wilson score confidence intervals for win rates.
+
+### 5. Momentum Analysis
+
+- Game momentum tracking
+- Lead changes
+- Comeback statistics
+- Competitiveness metrics
+
+### 6. Role-Specific Metrics
+
+- Hint efficiency (correct guesses per hint)
+- Guesser performance (accuracy, bomb rate)
+- Role versatility scores
+- Head-to-head matchup matrices
+
+### 7. Error Analysis
+
+- Error counts by model and type
+- Bomb hit contexts
+- Invalid guess patterns
+- Wrong guess color distribution
+
+### 8. Hint Pattern Analysis
+
+- Hint word frequency
+- Hint count distribution
+- Success rates by hint count
+- Hint creativity ratio
+- Average efficiency
+
+### 9. Efficiency Metrics
+
+- Average turns per game
+- Wins per turn
+- Efficiency by model
+- Turn-to-win ratios
+
+## Performance Considerations
+
+<Info>
+  The pipeline processes all games in memory. For very large benchmarks (10,000+ games), consider:
+  - Processing in batches
+  - Using chunked analysis
+  - Increasing available memory
+</Info>
+
+## Output Format
+
+All DataFrames use consistent column naming:
+
+- **model**: Model identifier
+- **role**: "hint_giver" or "guesser"
+- **team**: "blue" or "red"
+- **games_played**: Number of games
+- **wins**: Number of wins
+- **win_rate**: Win percentage (0-1)
+
+## Example Output Structure
+
+```python
+# Top hint givers
+result.top_hint
+#              model              role  avg_win_rate  games_played  total_wins
+# 0  gpt-4o-mini      Blue Hint Giver         0.652            23          15
+# 1  claude-haiku-3.5 Blue Hint Giver         0.621            29          18
+
+# Elo ratings
+result.elo_df
+#              model  elo_hint_giver  elo_guesser  elo_combined  elo_best_role
+# 0  gpt-4o-mini              1547         1523          1535     hint_giver
+# 1  claude-haiku-3.5         1538         1512          1525     hint_giver
+
+# Error summary
+result.error_summary
+#              model  bomb_hits  invalid_offboard  invalid_revealed  total_errors
+# 0  gpt-4o-mini              2                 1                 0            3
+```
+
+## Visualization Integration
+
+The `AnalysisResult` is designed to work seamlessly with the visualization module:
+
+```python
+from analysis.viz import create_visualizations
+
+# Generate all visualizations
+create_visualizations(result, output_dir)
+```
+
+See [Visualization](/api/analysis/visualization) for details on available charts.
+
+## Related
+
+- [Metrics Overview](/api/analysis/metrics) - Individual metric functions
+- [Visualization](/api/analysis/visualization) - Generate charts and plots
+- [BenchmarkData](/api/analysis/pipeline) - Data models and loading

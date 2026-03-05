@@ -1,0 +1,466 @@
+---
+title: 'Custom Board Variants'
+description: 'Configure custom board sizes and game rules'
+icon: 'grid'
+---
+
+## Overview
+
+The Codenames AI Benchmark supports custom board configurations through the `GameConfig` class. Modify board size, word distributions, and game rules to test agents under different conditions.
+
+## Game Configuration
+
+All game settings are defined in `config.py`:
+
+```python config.py
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class GameConfig:
+    """Game configuration constants."""
+    
+    # Board configuration
+    BOARD_SIZE: int = 25  # Total number of words on the board
+    BLUE_WORDS: int = 9   # Blue team words (starting team)
+    RED_WORDS: int = 8    # Red team words
+    NEUTRAL_WORDS: int = 7  # Neutral words
+    BOMB_COUNT: int = 1   # Number of bomb/assassin words
+    
+    # Game rules
+    MAX_TURNS: int = 50   # Maximum turns before game ends
+    MAX_GUESSES_PER_TURN: Optional[int] = None  # None = hint_count + 1
+    STARTING_TEAM: str = "BLUE"  # Which team starts (BLUE or RED)
+    
+    # Validation
+    MIN_HINT_COUNT: int = 1
+    MAX_HINT_COUNT: int = 9
+```
+
+## Standard Configuration
+
+The default 25-word board matches official Codenames rules:
+
+```python
+from config import GameConfig
+
+# Standard configuration
+standard_config = GameConfig(
+    BOARD_SIZE=25,
+    BLUE_WORDS=9,    # Starting team (extra word)
+    RED_WORDS=8,
+    NEUTRAL_WORDS=7,
+    BOMB_COUNT=1,
+    MAX_TURNS=50,
+    STARTING_TEAM="BLUE"
+)
+
+# Validate configuration
+standard_config.validate()  # Ensures word counts sum to BOARD_SIZE
+```
+
+## Creating Custom Variants
+
+### Small Board (9 words)
+
+Faster games for rapid testing:
+
+```python
+small_config = GameConfig(
+    BOARD_SIZE=9,
+    BLUE_WORDS=3,
+    RED_WORDS=2,
+    NEUTRAL_WORDS=3,
+    BOMB_COUNT=1,
+    MAX_TURNS=20,
+    STARTING_TEAM="BLUE"
+)
+```
+
+### Large Board (49 words)
+
+More complex, longer games:
+
+```python
+large_config = GameConfig(
+    BOARD_SIZE=49,
+    BLUE_WORDS=18,
+    RED_WORDS=17,
+    NEUTRAL_WORDS=13,
+    BOMB_COUNT=1,
+    MAX_TURNS=100,
+    STARTING_TEAM="BLUE"
+)
+```
+
+### Multiple Bombs
+
+Increased difficulty and risk:
+
+```python
+multi_bomb_config = GameConfig(
+    BOARD_SIZE=25,
+    BLUE_WORDS=9,
+    RED_WORDS=8,
+    NEUTRAL_WORDS=5,  # Reduced to make room
+    BOMB_COUNT=3,     # Three bombs!
+    MAX_TURNS=50,
+    STARTING_TEAM="BLUE"
+)
+```
+
+### Balanced Board
+
+Equal words for both teams (no first-mover advantage):
+
+```python
+balanced_config = GameConfig(
+    BOARD_SIZE=24,  # Even number
+    BLUE_WORDS=8,
+    RED_WORDS=8,
+    NEUTRAL_WORDS=7,
+    BOMB_COUNT=1,
+    MAX_TURNS=50,
+    STARTING_TEAM="BLUE"
+)
+```
+
+## Using the Custom Config Helper
+
+The `GameConfig.custom()` method automatically calculates word distributions:
+
+```python config.py
+@classmethod
+def custom(cls, board_size: int = 25, starting_team: str = "BLUE") -> "GameConfig":
+    """Create a custom game configuration with proportional word distributions."""
+    if board_size < 9:
+        raise ValueError("Board size must be at least 9")
+    if board_size % 2 == 0:
+        raise ValueError("Board size should be odd for fair play")
+    
+    # Calculate proportional distribution
+    starting_words = (board_size - 1) // 3 + 1
+    other_words = starting_words - 1
+    neutral_words = board_size - starting_words - other_words - 1
+    
+    return cls(
+        BOARD_SIZE=board_size,
+        BLUE_WORDS=starting_words if starting_team == "BLUE" else other_words,
+        RED_WORDS=starting_words if starting_team == "RED" else other_words,
+        NEUTRAL_WORDS=neutral_words,
+        BOMB_COUNT=1,
+        MAX_TURNS=max(50, board_size * 2),
+        STARTING_TEAM=starting_team
+    )
+```
+
+### Example Usage
+
+```python
+from config import GameConfig
+
+# Create 15-word board with auto-calculated distribution
+custom_config = GameConfig.custom(board_size=15, starting_team="BLUE")
+
+print(f"Board size: {custom_config.BOARD_SIZE}")
+print(f"Blue words: {custom_config.BLUE_WORDS}")
+print(f"Red words: {custom_config.RED_WORDS}")
+print(f"Neutral words: {custom_config.NEUTRAL_WORDS}")
+print(f"Bombs: {custom_config.BOMB_COUNT}")
+
+# Output:
+# Board size: 15
+# Blue words: 6
+# Red words: 5
+# Neutral words: 3
+# Bombs: 1
+```
+
+## Running Games with Custom Config
+
+Use custom configurations with the orchestrator:
+
+```python run_custom_game.py
+from orchestrator import Orchestrator
+from config import GameConfig
+from game import Team
+from agents.llm.baml_agents import BAMLHintGiver, BAMLGuesser, BAMLModel
+
+# Create custom config
+custom_config = GameConfig(
+    BOARD_SIZE=15,
+    BLUE_WORDS=6,
+    RED_WORDS=5,
+    NEUTRAL_WORDS=3,
+    BOMB_COUNT=1,
+    MAX_TURNS=30,
+    STARTING_TEAM="BLUE"
+)
+
+# Initialize orchestrator with custom config
+orchestrator = Orchestrator(
+    verbose=True,
+    config=custom_config
+)
+
+# Create agents
+blue_hg = BAMLHintGiver(Team.BLUE, BAMLModel.GPT4O_MINI)
+blue_g = BAMLGuesser(Team.BLUE, BAMLModel.GPT4O_MINI)
+red_hg = BAMLHintGiver(Team.RED, BAMLModel.CLAUDE_SONNET_45)
+red_g = BAMLGuesser(Team.RED, BAMLModel.CLAUDE_SONNET_45)
+
+# Play game with custom board
+result = orchestrator.play_game(
+    blue_hint_giver=blue_hg,
+    blue_guesser=blue_g,
+    red_hint_giver=red_hg,
+    red_guesser=red_g
+)
+
+print(f"Winner: {result.winner}")
+print(f"Turns: {result.total_turns}")
+```
+
+## Configuration with Config Class
+
+Use the unified `Config` class for complete configuration:
+
+```python config.py
+class Config:
+    """Main configuration class combining all config sections."""
+    
+    def __init__(self):
+        self.game = GameConfig()
+        self.llm = LLMConfig()
+        self.orchestrator = OrchestratorConfig()
+        self.data = DataConfig()
+    
+    @classmethod
+    def custom_game(cls, board_size: int = 25, **kwargs) -> "Config":
+        """Create config with custom game settings."""
+        config = cls()
+        config.game = GameConfig.custom(board_size, **kwargs)
+        return config
+```
+
+### Example
+
+```python
+from config import Config
+
+# Create full config with custom game settings
+full_config = Config.custom_game(
+    board_size=15,
+    starting_team="RED"
+)
+
+print(full_config.to_dict())
+```
+
+## Validation Rules
+
+The `validate()` method enforces configuration constraints:
+
+```python config.py
+def validate(self) -> bool:
+    """Validate that the configuration is internally consistent."""
+    # Board size must be at least 9
+    if self.BOARD_SIZE < 9:
+        raise ValueError("Board size must be at least 9")
+    
+    # Board size should be odd for fair play
+    if self.BOARD_SIZE % 2 == 0:
+        raise ValueError("Board size should be odd for fair play")
+    
+    # Word counts must sum to board size
+    total = self.BLUE_WORDS + self.RED_WORDS + self.NEUTRAL_WORDS + self.BOMB_COUNT
+    if total != self.BOARD_SIZE:
+        raise ValueError(
+            f"Word counts don't add up to board size: "
+            f"{self.BLUE_WORDS} + {self.RED_WORDS} + {self.NEUTRAL_WORDS} + {self.BOMB_COUNT} = {total}, "
+            f"expected {self.BOARD_SIZE}"
+        )
+    
+    return True
+```
+
+## Advanced Configuration Options
+
+### Limit Guesses Per Turn
+
+```python
+strict_config = GameConfig(
+    BOARD_SIZE=25,
+    BLUE_WORDS=9,
+    RED_WORDS=8,
+    NEUTRAL_WORDS=7,
+    BOMB_COUNT=1,
+    MAX_TURNS=50,
+    MAX_GUESSES_PER_TURN=3,  # Cap at 3 guesses regardless of hint count
+    STARTING_TEAM="BLUE"
+)
+```
+
+### Adjust Hint Count Limits
+
+```python
+conservative_config = GameConfig(
+    BOARD_SIZE=25,
+    BLUE_WORDS=9,
+    RED_WORDS=8,
+    NEUTRAL_WORDS=7,
+    BOMB_COUNT=1,
+    MAX_TURNS=50,
+    MIN_HINT_COUNT=1,
+    MAX_HINT_COUNT=4,  # Force smaller hints
+    STARTING_TEAM="BLUE"
+)
+```
+
+### Red Team Starts First
+
+```python
+red_start_config = GameConfig(
+    BOARD_SIZE=25,
+    BLUE_WORDS=8,   # Swap: Red team gets extra word
+    RED_WORDS=9,
+    NEUTRAL_WORDS=7,
+    BOMB_COUNT=1,
+    MAX_TURNS=50,
+    STARTING_TEAM="RED"
+)
+```
+
+## Benchmark Suite with Variants
+
+Test agents across multiple board configurations:
+
+```python benchmark_variants.py
+from orchestrator import Orchestrator
+from config import GameConfig
+from game import Team
+from agents.llm.baml_agents import BAMLHintGiver, BAMLGuesser, BAMLModel
+
+# Define variants
+variants = [
+    ("Small", GameConfig.custom(9)),
+    ("Standard", GameConfig.custom(25)),
+    ("Large", GameConfig.custom(49)),
+]
+
+# Test model on each variant
+model = BAMLModel.GPT4O_MINI
+results = {}
+
+for variant_name, config in variants:
+    orchestrator = Orchestrator(config=config)
+    
+    # Run 10 games per variant
+    wins = 0
+    for _ in range(10):
+        result = orchestrator.play_game(
+            blue_hint_giver=BAMLHintGiver(Team.BLUE, model),
+            blue_guesser=BAMLGuesser(Team.BLUE, model),
+            red_hint_giver=BAMLHintGiver(Team.RED, BAMLModel.CLAUDE_SONNET_45),
+            red_guesser=BAMLGuesser(Team.RED, BAMLModel.CLAUDE_SONNET_45)
+        )
+        if result.winner == "blue":
+            wins += 1
+    
+    results[variant_name] = wins / 10
+    print(f"{variant_name}: {results[variant_name]:.1%} win rate")
+```
+
+## Board Configuration Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test Variants" icon="flask">
+    Run agents on multiple board sizes to ensure robustness
+  </Card>
+  
+  <Card title="Odd Board Sizes" icon="hashtag">
+    Use odd numbers for fair play (starting team gets +1 word)
+  </Card>
+  
+  <Card title="Scale MAX_TURNS" icon="clock">
+    Increase turn limits proportionally with board size
+  </Card>
+  
+  <Card title="Validate Early" icon="shield-check">
+    Call `validate()` immediately after creating custom configs
+  </Card>
+</CardGroup>
+
+## Common Variant Use Cases
+
+<Tabs>
+  <Tab title="Rapid Testing">
+    **Small Board (9-15 words)**
+    
+    - Fast iteration during development
+    - Quick agent validation
+    - Reduced API costs
+    - Shorter runtime for CI/CD
+    
+    ```python
+    quick_test = GameConfig.custom(board_size=9)
+    ```
+  </Tab>
+  
+  <Tab title="Standard Benchmarks">
+    **Standard Board (25 words)**
+    
+    - Official Codenames rules
+    - Comparable to human play
+    - Balanced difficulty
+    - Industry standard for comparisons
+    
+    ```python
+    standard = GameConfig.custom(board_size=25)
+    ```
+  </Tab>
+  
+  <Tab title="Stress Testing">
+    **Large Board (49+ words)**
+    
+    - Test strategic depth
+    - Challenge reasoning capabilities
+    - Identify scaling issues
+    - Measure long-term consistency
+    
+    ```python
+    stress_test = GameConfig.custom(board_size=49)
+    ```
+  </Tab>
+  
+  <Tab title="High Stakes">
+    **Multiple Bombs**
+    
+    - Increase risk penalty
+    - Reward conservative play
+    - Test safety awareness
+    - Amplify hint quality importance
+    
+    ```python
+    high_risk = GameConfig(
+        BOARD_SIZE=25,
+        BLUE_WORDS=9,
+        RED_WORDS=8,
+        NEUTRAL_WORDS=5,
+        BOMB_COUNT=3
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Custom Agents" href="/advanced/custom-agents" icon="robot">
+    Build agents that adapt to different board sizes
+  </Card>
+  
+  <Card title="Analysis Metrics" href="/advanced/analysis-metrics" icon="chart-line">
+    Compare agent performance across board variants
+  </Card>
+</CardGroup>

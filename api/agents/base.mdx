@@ -1,0 +1,297 @@
+---
+title: 'Base Classes'
+description: 'Abstract base classes for Codenames agents'
+---
+
+## Overview
+
+The base module defines the abstract interfaces for Codenames agents. All agent implementations must inherit from either `HintGiver` or `Guesser` and implement their abstract methods.
+
+## HintResponse
+
+Data class representing a hint from the spymaster.
+
+<ParamField path="word" type="str" required>
+  The hint word (must be a single word with no spaces)
+</ParamField>
+
+<ParamField path="count" type="int" required>
+  Number of words that relate to the hint (must be positive)
+</ParamField>
+
+### Methods
+
+#### validate()
+
+Validates the hint response.
+
+**Returns:** `Tuple[bool, str]`
+- First element: `True` if valid, `False` otherwise
+- Second element: Error message if invalid, empty string if valid
+
+**Validation Rules:**
+- Hint word must be a non-empty string
+- Count must be a positive integer
+- Hint must be a single word (no spaces)
+
+```python
+response = HintResponse(word="ocean", count=3)
+is_valid, error = response.validate()
+if not is_valid:
+    print(f"Invalid hint: {error}")
+```
+
+---
+
+## HintGiver
+
+Abstract base class for hint giver (spymaster) agents.
+
+The hint giver sees all word colors and must give a one-word hint plus a number indicating how many words relate to that hint.
+
+### Constructor
+
+<ParamField path="team" type="Team" required>
+  The team this agent represents (Team.RED or Team.BLUE)
+</ParamField>
+
+```python
+from game import Team
+from agents.base import HintGiver
+
+class MyHintGiver(HintGiver):
+    def __init__(self, team: Team):
+        super().__init__(team)
+        # Your initialization code
+```
+
+### Methods
+
+#### get_model_name()
+
+Get the model name for this agent.
+
+**Returns:** `str` - Model identifier (e.g., "OpenRouterDevstral", "GPT4oMini")
+
+Subclasses should override this to return their actual model name. Default implementation returns the class name.
+
+```python
+def get_model_name(self) -> str:
+    return "MyCustomModel"
+```
+
+#### give_hint() <Icon icon="circle-exclamation" iconType="solid" color="#f59e0b" />
+
+Generate a hint for the team. **This is an abstract method that must be implemented.**
+
+<ParamField path="my_words" type="List[str]" required>
+  List of unrevealed words belonging to this agent's team
+</ParamField>
+
+<ParamField path="opponent_words" type="List[str]" required>
+  List of unrevealed opponent words
+</ParamField>
+
+<ParamField path="neutral_words" type="List[str]" required>
+  List of unrevealed neutral words
+</ParamField>
+
+<ParamField path="bomb_words" type="List[str]" required>
+  List of bomb words (if not revealed)
+</ParamField>
+
+<ParamField path="revealed_words" type="List[str]" required>
+  List of already revealed words
+</ParamField>
+
+<ParamField path="board_words" type="List[str]" required>
+  All words on the board (for reference)
+</ParamField>
+
+**Returns:** `HintResponse` - Contains hint word and count
+
+**Implementation Notes:**
+- Hint word must be a single word (no spaces)
+- Hint word should not be any word currently on the board
+- Count indicates how many of your team's words relate to the hint
+- Avoid hints that could lead to bomb or opponent words
+
+```python
+def give_hint(
+    self,
+    my_words: List[str],
+    opponent_words: List[str],
+    neutral_words: List[str],
+    bomb_words: List[str],
+    revealed_words: List[str],
+    board_words: List[str]
+) -> HintResponse:
+    # Your hint generation logic
+    return HintResponse(word="ocean", count=3)
+```
+
+---
+
+## Guesser
+
+Abstract base class for guesser (field operative) agents.
+
+The guesser only sees the words on the board (not colors) and must guess words based on the hint from their team's hint giver.
+
+### Constructor
+
+<ParamField path="team" type="Team" required>
+  The team this agent represents (Team.RED or Team.BLUE)
+</ParamField>
+
+```python
+from game import Team
+from agents.base import Guesser
+
+class MyGuesser(Guesser):
+    def __init__(self, team: Team):
+        super().__init__(team)
+        # Your initialization code
+```
+
+### Methods
+
+#### get_model_name()
+
+Get the model name for this agent.
+
+**Returns:** `str` - Model identifier (e.g., "OpenRouterDevstral", "GPT4oMini")
+
+Subclasses should override this to return their actual model name. Default implementation returns the class name.
+
+```python
+def get_model_name(self) -> str:
+    return "MyCustomModel"
+```
+
+#### make_guesses() <Icon icon="circle-exclamation" iconType="solid" color="#f59e0b" />
+
+Make guesses based on the hint. **This is an abstract method that must be implemented.**
+
+<ParamField path="hint_word" type="str" required>
+  The hint word given by the hint giver
+</ParamField>
+
+<ParamField path="hint_count" type="int" required>
+  Number of words the hint relates to
+</ParamField>
+
+<ParamField path="board_words" type="List[str]" required>
+  All words on the board
+</ParamField>
+
+<ParamField path="revealed_words" type="List[str]" required>
+  List of already revealed words
+</ParamField>
+
+**Returns:** `List[str]` - List of words to guess (in order of preference)
+
+**Implementation Notes:**
+- Can return 1 to (hint_count + 1) guesses
+- Standard strategy: guess up to hint_count words
+- Extra guess allowed (hint_count + 1) for previous hints
+- Guessing stops when wrong word is revealed
+- Must only guess from unrevealed words
+- Should return empty list to pass turn
+
+```python
+def make_guesses(
+    self,
+    hint_word: str,
+    hint_count: int,
+    board_words: List[str],
+    revealed_words: List[str]
+) -> List[str]:
+    # Your guessing logic
+    return ["whale", "dolphin", "shark"]
+```
+
+#### process_result()
+
+Optional feedback method called after each guess.
+
+<ParamField path="guessed_word" type="str" required>
+  The word that was guessed
+</ParamField>
+
+<ParamField path="was_correct" type="bool" required>
+  Whether it was the team's word
+</ParamField>
+
+<ParamField path="color" type="CardColor" required>
+  The actual color of the word (RED, BLUE, NEUTRAL, or BOMB)
+</ParamField>
+
+**Notes:**
+- This is called after each guess
+- Agents can use this to adjust their strategy
+- Default implementation does nothing
+
+```python
+def process_result(self, guessed_word: str, was_correct: bool, color: CardColor):
+    if not was_correct:
+        print(f"Wrong guess: {guessed_word} was {color.value}")
+```
+
+#### reset()
+
+Reset agent state between games.
+
+Subclasses should override this to clear any accumulated state (e.g., guess history) when agents are reused across multiple games.
+
+```python
+def reset(self):
+    self.guess_history = []
+    self.internal_state = {}
+```
+
+---
+
+## Example: Implementing a Custom Agent
+
+```python
+from typing import List
+from game import Team
+from agents.base import HintGiver, Guesser, HintResponse
+
+class MyHintGiver(HintGiver):
+    def __init__(self, team: Team):
+        super().__init__(team)
+    
+    def give_hint(
+        self,
+        my_words: List[str],
+        opponent_words: List[str],
+        neutral_words: List[str],
+        bomb_words: List[str],
+        revealed_words: List[str],
+        board_words: List[str]
+    ) -> HintResponse:
+        # Pick a simple hint
+        if my_words:
+            return HintResponse(word="clue", count=len(my_words))
+        return HintResponse(word="pass", count=0)
+
+class MyGuesser(Guesser):
+    def __init__(self, team: Team):
+        super().__init__(team)
+        self.history = []
+    
+    def make_guesses(
+        self,
+        hint_word: str,
+        hint_count: int,
+        board_words: List[str],
+        revealed_words: List[str]
+    ) -> List[str]:
+        unrevealed = [w for w in board_words if w not in revealed_words]
+        return unrevealed[:hint_count] if unrevealed else []
+    
+    def reset(self):
+        self.history = []
+```

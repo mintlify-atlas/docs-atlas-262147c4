@@ -1,0 +1,462 @@
+---
+title: 'Analysis & Metrics'
+description: 'Comprehensive performance metrics and analysis tools'
+icon: 'chart-line'
+---
+
+## Overview
+
+The Codenames AI Benchmark includes a sophisticated analysis pipeline for measuring agent performance across multiple dimensions. All metrics are computed from game result JSON files.
+
+## Analysis Pipeline
+
+The analysis system is located in the `analysis/` directory:
+
+```
+analysis/
+├── models.py              # Data models for games, turns, and metrics
+├── loader.py              # Load benchmark results from JSON
+├── pipeline.py            # Analysis pipeline orchestration
+├── report.py              # Generate markdown reports
+├── viz.py                 # Visualization utilities
+└── metrics/
+    ├── win_rates.py       # Win rate calculations
+    ├── efficiency.py      # Game efficiency metrics
+    ├── hints.py           # Hint quality analysis
+    ├── elo.py             # Elo rating system
+    ├── errors.py          # Error pattern analysis
+    ├── momentum.py        # Game momentum tracking
+    ├── confidence.py      # Confidence scoring
+    └── roles.py           # Role-specific performance
+```
+
+## Core Data Models
+
+The analysis system uses structured data models defined in `analysis/models.py`:
+
+```python analysis/models.py
+from dataclasses import dataclass
+from typing import List, Dict, Optional
+
+@dataclass
+class Guess:
+    word: str
+    correct: bool
+    color: Optional[str]
+    hit_bomb: bool
+    metadata: Dict[str, Any]
+
+@dataclass
+class Turn:
+    team: str
+    hint_word: str
+    hint_count: int
+    guesses: List[Guess]
+    turn_number: int
+
+@dataclass
+class Game:
+    game_id: str
+    winner: Optional[str]
+    total_turns: int
+    turns: List[Turn]
+    models: Dict[str, str]  # Maps roles to model names
+    raw: Dict[str, Any]
+
+@dataclass
+class BenchmarkData:
+    games: List[Game]
+    team_combinations: Dict[str, TeamCombination]
+    model_performance: Dict[str, ModelPerformance]
+    benchmark_id: str
+```
+
+## Win Rate Metrics
+
+Track overall success rates by team, role, and combination:
+
+```python analysis/metrics/win_rates.py
+from analysis.models import BenchmarkData
+import pandas as pd
+
+def team_combo_stats(data: BenchmarkData) -> pd.DataFrame:
+    """Return normalized team combination stats as DataFrame."""
+    return data.to_team_combo_df()
+
+def role_performance(data: BenchmarkData) -> pd.DataFrame:
+    """Aggregate model performance by role using game turn data."""
+    # Computes:
+    # - games_played, wins, win_rate
+    # - hint_success_rate, guess_accuracy
+    # - bomb_hit_rate
+    # Returns DataFrame with performance by model+role
+
+def best_hint_givers(combo_df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
+    """Top hint givers aggregated by team side."""
+    # Ranks models by average win rate as hint giver
+
+def best_guessers(combo_df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
+    """Top guessers aggregated by team side."""
+    # Ranks models by average win rate as guesser
+
+def model_synergies(combo_df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
+    """Find best hint giver + guesser combinations."""
+    # Identifies which pairs work best together
+
+def first_mover_advantage(combo_df: pd.DataFrame) -> dict:
+    """Calculate first-move (blue team) advantage statistics."""
+    return {
+        "overall_blue_win_rate": float,
+        "overall_red_win_rate": float,
+        "blue_advantage": float,  # Deviation from 0.5
+        "mirror_match_blue_rate": float,  # Same agents on both sides
+        "total_games": int
+    }
+```
+
+### Example Usage
+
+```python
+from analysis.loader import load_benchmark
+from analysis.metrics.win_rates import role_performance, best_hint_givers
+
+# Load benchmark results
+data = load_benchmark("benchmark_results/benchmark_20250101_120000.json")
+
+# Get role performance
+role_df = role_performance(data)
+print(role_df[['model', 'role', 'win_rate', 'guess_accuracy']].head())
+
+# Find best hint givers
+team_df = data.to_team_combo_df()
+top_hints = best_hint_givers(team_df, top_n=5)
+print(top_hints)
+```
+
+## Efficiency Metrics
+
+Measure how effectively agents win games:
+
+```python analysis/metrics/efficiency.py
+def game_efficiency(data: BenchmarkData) -> pd.DataFrame:
+    """Calculate efficiency metrics for each team combination."""
+    # Computes:
+    # - avg_turns: Average game length
+    # - blue_efficiency: blue_wins / total_turns
+    # - red_efficiency: red_wins / total_turns
+    # - Efficiency measures wins per turn invested
+
+def efficiency_by_model(efficiency_df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate efficiency statistics by model across all games."""
+    # Returns:
+    # - win_rate: Overall win percentage
+    # - avg_turns_per_game: Average game length
+    # - avg_turns_to_win: Turns needed when winning
+```
+
+**Interpretation:**
+- **High efficiency** = Wins quickly with fewer turns
+- **Low efficiency** = Takes many turns to win (or loses)
+- Useful for comparing aggressive vs. conservative strategies
+
+## Hint Quality Metrics
+
+Analyze hint patterns and effectiveness:
+
+```python analysis/metrics/hints.py
+def hint_patterns(data: BenchmarkData) -> dict:
+    """Comprehensive hint analysis across all games."""
+    return {
+        "total_hints": int,
+        "unique_hints": int,
+        "creativity_ratio": float,  # unique / total
+        "avg_hint_length": float,
+        "avg_hint_count": float,
+        "overall_success_rate": float,  # % with ≥1 correct guess
+        "perfect_hint_rate": float,  # % where correct_guesses ≥ hint_count
+        "avg_efficiency": float,  # correct_guesses / hint_count
+        "hint_count_distribution": dict,  # How many 1s, 2s, 3s, etc.
+        "most_common_hints": list,  # Top 15 most used hints
+        "success_by_count": dict  # Success rate by hint count (1, 2, 3...)
+    }
+```
+
+### Key Hint Metrics
+
+<CardGroup cols={2}>
+  <Card title="Success Rate" icon="bullseye">
+    Percentage of hints that lead to at least one correct guess
+  </Card>
+  
+  <Card title="Perfect Hint Rate" icon="star">
+    Percentage of hints where all guesses are correct
+  </Card>
+  
+  <Card title="Creativity Ratio" icon="palette">
+    Unique hints / total hints - measures hint diversity
+  </Card>
+  
+  <Card title="Efficiency" icon="gauge">
+    Average correct guesses per hint count - measures precision
+  </Card>
+</CardGroup>
+
+## Elo Rating System
+
+Compute skill ratings using Elo algorithm:
+
+```python analysis/metrics/elo.py
+def compute_elo(
+    data: BenchmarkData, 
+    k_factor: float = 32, 
+    initial_rating: float = 1500
+) -> pd.DataFrame:
+    """Calculate Elo ratings for models in hint/guesser roles."""
+    # Returns DataFrame with:
+    # - elo_hint_giver: Rating as hint giver
+    # - elo_guesser: Rating as guesser
+    # - elo_combined: Average of both roles
+    # - elo_best_role: Which role has higher rating
+```
+
+**How it works:**
+1. All models start at initial_rating (default 1500)
+2. After each game, winners gain points, losers lose points
+3. Points transferred depend on rating difference (upsets = bigger swings)
+4. Ratings stabilize after ~30-50 games per model
+
+**Interpretation:**
+- **1500**: Average/baseline
+- **1600+**: Strong performer
+- **1400-**: Weak performer
+- **100 point difference** ≈ 64% expected win rate
+
+## Error Analysis
+
+Identify failure patterns and problem areas:
+
+```python analysis/metrics/errors.py
+def error_patterns(data: BenchmarkData) -> dict:
+    """Analyze error patterns across all games."""
+    return {
+        "bomb_hits_by_model": dict,  # How often each model hits bombs
+        "bomb_contexts": list,  # Details of each bomb hit
+        "invalid_by_type": dict,  # Invalid guesses by type
+        "wrong_guess_colors": dict,  # What types of wrong guesses
+        "total_errors_by_model": dict  # Overall error count
+    }
+
+def error_summary(errors: dict) -> pd.DataFrame:
+    """Create summary table of errors by model."""
+    # Returns DataFrame with:
+    # - bomb_hits
+    # - invalid_offboard (guessed non-existent words)
+    # - invalid_revealed (guessed already-revealed words)
+    # - invalid_other
+    # - total_errors
+```
+
+### Error Categories
+
+- **Bomb Hits**: Guessed the bomb word (instant loss)
+- **Invalid Offboard**: Guessed word not on board
+- **Invalid Revealed**: Guessed already-revealed word
+- **Wrong Guesses**: Valid but incorrect guesses (opponent/neutral)
+
+## Running Full Analysis
+
+Generate comprehensive reports:
+
+```python run_analysis.py
+from analysis.loader import load_benchmark
+from analysis.pipeline import run_full_analysis
+from analysis.report import generate_markdown_report
+
+# Load benchmark data
+data = load_benchmark("benchmark_results/benchmark_20250101.json")
+
+# Run all metrics
+results = run_full_analysis(data)
+
+# Generate report
+report = generate_markdown_report(results)
+
+with open("analysis_report.md", "w") as f:
+    f.write(report)
+
+print("Analysis complete! Report saved to analysis_report.md")
+```
+
+## Custom Metrics
+
+Create your own analysis functions:
+
+```python custom_metrics.py
+from analysis.models import BenchmarkData
+import pandas as pd
+
+def analyze_turn_timing(data: BenchmarkData) -> pd.DataFrame:
+    """Analyze performance by turn number."""
+    rows = []
+    for game in data.games:
+        for turn in game.turns:
+            rows.append({
+                'turn_number': turn.turn_number,
+                'team': turn.team,
+                'hint_count': turn.hint_count,
+                'guesses_made': len(turn.guesses),
+                'correct': sum(1 for g in turn.guesses if g.correct),
+                'winner': game.winner
+            })
+    df = pd.DataFrame(rows)
+    
+    # Aggregate by turn number
+    turn_analysis = df.groupby('turn_number').agg({
+        'correct': 'mean',
+        'guesses_made': 'mean',
+        'hint_count': 'mean'
+    })
+    
+    return turn_analysis
+
+def model_vs_model_matchups(data: BenchmarkData) -> pd.DataFrame:
+    """Head-to-head records between model pairs."""
+    matchups = {}
+    
+    for game in data.games:
+        blue_hg = game.models.get('blue_hint_giver')
+        red_hg = game.models.get('red_hint_giver')
+        
+        if not blue_hg or not red_hg:
+            continue
+            
+        matchup_key = f"{blue_hg} vs {red_hg}"
+        
+        if matchup_key not in matchups:
+            matchups[matchup_key] = {'blue_wins': 0, 'red_wins': 0, 'games': 0}
+        
+        matchups[matchup_key]['games'] += 1
+        if game.winner == 'blue':
+            matchups[matchup_key]['blue_wins'] += 1
+        elif game.winner == 'red':
+            matchups[matchup_key]['red_wins'] += 1
+    
+    return pd.DataFrame.from_dict(matchups, orient='index')
+```
+
+## Visualization Examples
+
+Create charts from metrics:
+
+```python visualize.py
+import matplotlib.pyplot as plt
+import seaborn as sns
+from analysis.loader import load_benchmark
+from analysis.metrics.win_rates import role_performance
+
+# Load data and compute metrics
+data = load_benchmark("benchmark_results/benchmark_20250101.json")
+role_df = role_performance(data)
+
+# Plot win rates by model
+plt.figure(figsize=(12, 6))
+sns.barplot(data=role_df, x='model', y='win_rate', hue='role')
+plt.xticks(rotation=45)
+plt.title('Win Rate by Model and Role')
+plt.tight_layout()
+plt.savefig('win_rates.png')
+
+# Plot hint success vs guess accuracy
+plt.figure(figsize=(10, 6))
+sns.scatterplot(
+    data=role_df[role_df['role'] == 'hint_giver'],
+    x='hint_success_rate',
+    y='guess_accuracy',
+    size='games_played',
+    hue='model',
+    alpha=0.7
+)
+plt.title('Hint Success Rate vs Guess Accuracy')
+plt.tight_layout()
+plt.savefig('hint_vs_guess.png')
+```
+
+## Metric Interpretation Guide
+
+<AccordionGroup>
+  <Accordion title="Win Rate vs Elo Rating">
+    **Win Rate**: Simple percentage of games won. Easy to understand but doesn't account for opponent strength.
+    
+    **Elo Rating**: Adjusts for opponent quality. A model with 60% win rate against strong opponents may have higher Elo than a model with 70% against weak opponents.
+    
+    Use Elo for rankings, win rate for absolute performance measurement.
+  </Accordion>
+  
+  <Accordion title="Efficiency Metrics">
+    **High efficiency + High win rate**: Dominant, wins quickly
+    
+    **High efficiency + Low win rate**: Wins quickly when winning, but loses often (aggressive strategy)
+    
+    **Low efficiency + High win rate**: Grinds out wins in long games (conservative strategy)
+    
+    **Low efficiency + Low win rate**: Struggling, loses in long games
+  </Accordion>
+  
+  <Accordion title="Hint Quality Metrics">
+    **Perfect hint rate > Success rate**: Hints are either perfect or total failures (risky strategy)
+    
+    **Success rate high, efficiency low**: Gives conservative hints that work but don't maximize coverage
+    
+    **High creativity ratio**: Uses diverse vocabulary, less repetitive
+    
+    **Low creativity ratio**: Falls back on safe, proven hints
+  </Accordion>
+</AccordionGroup>
+
+## Performance Benchmarking
+
+Compare models systematically:
+
+```python
+from analysis.loader import load_benchmark
+from analysis.metrics import win_rates, efficiency, hints, elo
+
+def benchmark_model(model_name: str, data: BenchmarkData) -> dict:
+    """Get comprehensive stats for a specific model."""
+    
+    # Win rates
+    role_df = win_rates.role_performance(data)
+    model_perf = role_df[role_df['model'] == model_name]
+    
+    # Efficiency
+    eff_df = efficiency.efficiency_by_model(
+        efficiency.game_efficiency(data)
+    )
+    model_eff = eff_df[eff_df['model'] == model_name]
+    
+    # Elo
+    elo_df = elo.compute_elo(data)
+    model_elo = elo_df[elo_df['model'] == model_name]
+    
+    return {
+        'model': model_name,
+        'win_rate': float(model_perf['win_rate'].mean()),
+        'guess_accuracy': float(model_perf['guess_accuracy'].mean()),
+        'hint_success': float(model_perf['hint_success_rate'].mean()),
+        'efficiency': float(model_eff['win_rate'].mean()),
+        'elo_combined': int(model_elo['elo_combined'].iloc[0]),
+        'games_played': int(model_perf['games_played'].sum())
+    }
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Custom Agents" href="/advanced/custom-agents" icon="robot">
+    Build agents informed by metric insights
+  </Card>
+  
+  <Card title="Prompt Engineering" href="/advanced/prompt-engineering" icon="wand-magic-sparkles">
+    Optimize prompts based on performance data
+  </Card>
+</CardGroup>

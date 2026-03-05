@@ -1,0 +1,615 @@
+---
+title: 'BAML Agents'
+description: 'Universal BAML-based agents for all LLM providers'
+---
+
+## Overview
+
+The BAML agents module provides a unified implementation that works with any LLM provider through BAML (Boundary Agent Markup Language). This replaces provider-specific implementations with a single, clean interface.
+
+**Key Features:**
+- Automatic prompt templating and management
+- Structured output parsing and validation
+- Built-in error handling and retries
+- Type-safe responses
+- Support for 80+ models from multiple providers
+
+---
+
+## BAMLModel
+
+Enum of available BAML client models. All models are current as of December 2025.
+
+### OpenAI Models
+
+#### GPT-5.2 Series (Latest - December 2025)
+
+<CardGroup cols={2}>
+  <Card title="GPT5" icon="brain">
+    `BAMLModel.GPT5` - Base GPT-5.2 model
+  </Card>
+  <Card title="GPT5Mini" icon="bolt">
+    `BAMLModel.GPT5_MINI` - Fast, cost-effective GPT-5.2
+  </Card>
+  <Card title="GPT5Nano" icon="microchip">
+    `BAMLModel.GPT5_NANO` - Ultra-compact GPT-5.2
+  </Card>
+  <Card title="GPT5Chat" icon="comments">
+    `BAMLModel.GPT5_CHAT` - gpt-5.2-chat-latest (Instant)
+  </Card>
+  <Card title="GPT5Pro" icon="crown">
+    `BAMLModel.GPT5_PRO` - Most capable GPT-5.2
+  </Card>
+</CardGroup>
+
+#### GPT-4.1 Series (April 2025)
+
+<CardGroup cols={2}>
+  <Card title="GPT41" icon="brain">
+    `BAMLModel.GPT41` - Base GPT-4.1 model
+  </Card>
+  <Card title="GPT41Mini" icon="bolt">
+    `BAMLModel.GPT41_MINI` - Fast GPT-4.1
+  </Card>
+  <Card title="GPT41Nano" icon="microchip">
+    `BAMLModel.GPT41_NANO` - Compact GPT-4.1
+  </Card>
+</CardGroup>
+
+#### Reasoning Models (o-series)
+
+<CardGroup cols={2}>
+  <Card title="O4Mini" icon="lightbulb">
+    `BAMLModel.O4_MINI` - Latest reasoning model
+  </Card>
+  <Card title="O3Mini" icon="lightbulb">
+    `BAMLModel.O3_MINI` - Reasoning model
+  </Card>
+  <Card title="O3" icon="lightbulb">
+    `BAMLModel.O3` - Advanced reasoning
+  </Card>
+  <Card title="O1" icon="lightbulb">
+    `BAMLModel.O1` - Original reasoning model
+  </Card>
+  <Card title="O1Mini" icon="lightbulb">
+    `BAMLModel.O1_MINI` - Compact reasoning
+  </Card>
+  <Card title="O1Preview" icon="lightbulb">
+    `BAMLModel.O1_PREVIEW` - Preview version
+  </Card>
+</CardGroup>
+
+#### GPT-4o Series
+
+<CardGroup cols={2}>
+  <Card title="GPT4o" icon="brain">
+    `BAMLModel.GPT4O` - Latest GPT-4o
+  </Card>
+  <Card title="GPT4oMini" icon="bolt">
+    `BAMLModel.GPT4O_MINI` - Fast, affordable GPT-4o
+  </Card>
+  <Card title="GPT4o (8/6/24)" icon="calendar">
+    `BAMLModel.GPT4O_20240806` - Specific snapshot
+  </Card>
+  <Card title="GPT4oMini (7/18/24)" icon="calendar">
+    `BAMLModel.GPT4O_MINI_20240718` - Specific snapshot
+  </Card>
+</CardGroup>
+
+#### GPT-4 Turbo Series (Legacy)
+
+- `BAMLModel.GPT4_TURBO` - GPT-4 Turbo
+- `BAMLModel.GPT4_TURBO_PREVIEW` - Preview version
+- `BAMLModel.GPT4_0125_PREVIEW` - January 2025 preview
+- `BAMLModel.GPT4_1106_PREVIEW` - November preview
+
+#### GPT-4 Base Series (Legacy)
+
+- `BAMLModel.GPT4` - Base GPT-4
+- `BAMLModel.GPT4_32K` - 32k context window
+- `BAMLModel.GPT4_0613` - June snapshot
+
+#### GPT-3.5 Series (Legacy)
+
+- `BAMLModel.GPT35_TURBO` - GPT-3.5 Turbo
+- `BAMLModel.GPT35_TURBO_16K` - 16k context
+- `BAMLModel.GPT35_TURBO_INSTRUCT` - Instruct variant
+
+### Anthropic Claude Models
+
+#### Claude 4.5 Series (Latest - October/November 2025)
+
+<CardGroup cols={2}>
+  <Card title="ClaudeSonnet45" icon="brain">
+    `BAMLModel.CLAUDE_SONNET_45` - 1M context available
+  </Card>
+  <Card title="ClaudeHaiku45" icon="bolt">
+    `BAMLModel.CLAUDE_HAIKU_45` - Fast, affordable
+  </Card>
+</CardGroup>
+
+#### Claude 4.x Series
+
+<CardGroup cols={2}>
+  <Card title="ClaudeOpus41" icon="crown">
+    `BAMLModel.CLAUDE_OPUS_41` - Most capable (August 2025)
+  </Card>
+  <Card title="ClaudeSonnet4" icon="brain">
+    `BAMLModel.CLAUDE_SONNET_4` - May 2025
+  </Card>
+  <Card title="ClaudeOpus4" icon="crown">
+    `BAMLModel.CLAUDE_OPUS_4` - May 2025
+  </Card>
+</CardGroup>
+
+#### Claude 3.x Series (Legacy)
+
+- `BAMLModel.CLAUDE_SONNET_37` - Sonnet 3.7
+- `BAMLModel.CLAUDE_HAIKU_35` - Haiku 3.5
+- `BAMLModel.CLAUDE_HAIKU_3` - Haiku 3
+
+### Google Gemini Models
+
+#### Gemini 2.5 Series
+
+<CardGroup cols={2}>
+  <Card title="Gemini25Pro" icon="crown">
+    `BAMLModel.GEMINI_25_PRO` - Most capable Gemini
+  </Card>
+  <Card title="Gemini25Flash" icon="bolt">
+    `BAMLModel.GEMINI_25_FLASH` - Fast Gemini 2.5
+  </Card>
+  <Card title="Gemini25FlashLite" icon="feather">
+    `BAMLModel.GEMINI_25_FLASH_LITE` - Lightweight
+  </Card>
+</CardGroup>
+
+#### Gemini 2.0 Series
+
+<CardGroup cols={2}>
+  <Card title="Gemini20Flash" icon="bolt">
+    `BAMLModel.GEMINI_20_FLASH` - Fast Gemini 2.0
+  </Card>
+  <Card title="Gemini20FlashLite" icon="feather">
+    `BAMLModel.GEMINI_20_FLASH_LITE` - Lightweight
+  </Card>
+</CardGroup>
+
+### xAI Grok Models
+
+#### Grok 4 Series
+
+<CardGroup cols={2}>
+  <Card title="Grok4" icon="brain">
+    `BAMLModel.GROK4` - Latest Grok
+  </Card>
+  <Card title="Grok4FastReasoning" icon="lightbulb">
+    `BAMLModel.GROK4_FAST_REASONING` - Fast reasoning mode
+  </Card>
+  <Card title="Grok4FastNonReasoning" icon="bolt">
+    `BAMLModel.GROK4_FAST_NON_REASONING` - Fast non-reasoning
+  </Card>
+</CardGroup>
+
+#### Grok 3 Series
+
+- `BAMLModel.GROK3` - Base Grok 3
+- `BAMLModel.GROK3_FAST` - Fast variant
+- `BAMLModel.GROK3_MINI` - Compact version
+- `BAMLModel.GROK3_MINI_FAST` - Fast compact
+
+### DeepSeek Models
+
+#### DeepSeek V3.2 (December 2025)
+
+<CardGroup cols={2}>
+  <Card title="DeepSeekChat" icon="comments">
+    `BAMLModel.DEEPSEEK_CHAT` - V3.2 non-thinking mode
+  </Card>
+  <Card title="DeepSeekReasoner" icon="lightbulb">
+    `BAMLModel.DEEPSEEK_REASONER` - V3.2 thinking mode
+  </Card>
+</CardGroup>
+
+### OpenRouter Free Models
+
+<CardGroup cols={2}>
+  <Card title="OpenRouterDevstral" icon="code">
+    `BAMLModel.OPENROUTER_DEVSTRAL` - Mistral for developers
+  </Card>
+  <Card title="OpenRouterMimoV2Flash" icon="bolt">
+    `BAMLModel.OPENROUTER_MIMO_V2_FLASH` - Fast Mimo V2
+  </Card>
+  <Card title="OpenRouterNemotronNano" icon="microchip">
+    `BAMLModel.OPENROUTER_NEMOTRON_NANO` - Compact Nemotron
+  </Card>
+  <Card title="OpenRouterDeepSeekR1TChimera" icon="flask">
+    `BAMLModel.OPENROUTER_DEEPSEEK_R1T_CHIMERA` - R1T variant
+  </Card>
+  <Card title="OpenRouterDeepSeekR1T2Chimera" icon="flask">
+    `BAMLModel.OPENROUTER_DEEPSEEK_R1T2_CHIMERA` - R1T2 variant
+  </Card>
+  <Card title="OpenRouterGLM45Air" icon="wind">
+    `BAMLModel.OPENROUTER_GLM_45_AIR` - GLM 4.5 Air
+  </Card>
+  <Card title="OpenRouterLlama33_70B" icon="llama">
+    `BAMLModel.OPENROUTER_LLAMA_33_70B` - Llama 3.3 70B
+  </Card>
+  <Card title="OpenRouterOLMo3_32B" icon="brain">
+    `BAMLModel.OPENROUTER_OLMO3_32B` - OLMo 3 32B
+  </Card>
+</CardGroup>
+
+### Other Models
+
+- `BAMLModel.LLAMA` - Meta Llama (via Together AI or similar)
+
+---
+
+## BAMLHintGiver
+
+Universal BAML-based hint giver (spymaster) that works with any LLM provider.
+
+This single class replaces all provider-specific hint giver implementations with a unified BAML-based approach.
+
+### Constructor
+
+<ParamField path="team" type="Team" required>
+  Team this agent plays for (Team.RED or Team.BLUE)
+</ParamField>
+
+<ParamField path="model" type="BAMLModel" default="BAMLModel.GPT4O_MINI">
+  BAML model/client to use
+</ParamField>
+
+```python
+from game import Team
+from agents.llm.baml_agents import BAMLHintGiver, BAMLModel
+
+# Using default model (GPT4oMini)
+hint_giver = BAMLHintGiver(team=Team.BLUE)
+
+# Using specific model
+hint_giver = BAMLHintGiver(
+    team=Team.RED,
+    model=BAMLModel.CLAUDE_SONNET_45
+)
+```
+
+### Methods
+
+#### get_model_name()
+
+Return the model identifier.
+
+**Returns:** `str` - Model name (e.g., "OpenRouterDevstral", "GPT4oMini")
+
+```python
+model_name = hint_giver.get_model_name()
+print(f"Using model: {model_name}")
+```
+
+#### give_hint()
+
+Generate hint using BAML.
+
+This method automatically handles:
+- Prompt templating
+- Structured output parsing
+- Error handling and retries
+- Type validation
+
+<ParamField path="my_words" type="List[str]" required>
+  List of unrevealed words belonging to this agent's team
+</ParamField>
+
+<ParamField path="opponent_words" type="List[str]" required>
+  List of unrevealed opponent words
+</ParamField>
+
+<ParamField path="neutral_words" type="List[str]" required>
+  List of unrevealed neutral words
+</ParamField>
+
+<ParamField path="bomb_words" type="List[str]" required>
+  List of bomb words (if not revealed)
+</ParamField>
+
+<ParamField path="revealed_words" type="List[str]" required>
+  List of already revealed words
+</ParamField>
+
+<ParamField path="board_words" type="List[str]" required>
+  All words on the board (for reference)
+</ParamField>
+
+**Returns:** `HintResponse` - Contains validated hint word and count
+
+```python
+response = hint_giver.give_hint(
+    my_words=["whale", "dolphin", "shark"],
+    opponent_words=["cat", "dog"],
+    neutral_words=["table", "chair"],
+    bomb_words=["explosion"],
+    revealed_words=["car"],
+    board_words=["whale", "dolphin", "shark", "cat", "dog", 
+                 "table", "chair", "explosion", "car"]
+)
+print(f"Hint: {response.word} {response.count}")
+```
+
+---
+
+## BAMLGuesser
+
+Universal BAML-based guesser (field operative) that works with any LLM provider.
+
+This single class replaces all provider-specific guesser implementations with a unified BAML-based approach.
+
+### Constructor
+
+<ParamField path="team" type="Team" required>
+  Team this agent plays for (Team.RED or Team.BLUE)
+</ParamField>
+
+<ParamField path="model" type="BAMLModel" default="BAMLModel.GPT4O_MINI">
+  BAML model/client to use
+</ParamField>
+
+```python
+from game import Team
+from agents.llm.baml_agents import BAMLGuesser, BAMLModel
+
+# Using default model (GPT4oMini)
+guesser = BAMLGuesser(team=Team.BLUE)
+
+# Using specific model
+guesser = BAMLGuesser(
+    team=Team.RED,
+    model=BAMLModel.GEMINI_25_FLASH
+)
+```
+
+### Attributes
+
+<ParamField path="guess_history" type="List[dict]">
+  Tracks guess results for analysis. Each entry contains:
+  - `word` (str): The guessed word
+  - `correct` (bool): Whether it was correct
+  - `color` (str): The actual color value
+</ParamField>
+
+### Methods
+
+#### get_model_name()
+
+Return the model identifier.
+
+**Returns:** `str` - Model name (e.g., "OpenRouterDevstral", "GPT4oMini")
+
+```python
+model_name = guesser.get_model_name()
+print(f"Using model: {model_name}")
+```
+
+#### make_guesses()
+
+Make guesses using BAML.
+
+This method automatically handles:
+- Prompt templating
+- Structured output parsing
+- Error handling and retries
+- Type validation
+
+<ParamField path="hint_word" type="str" required>
+  The hint word given by the hint giver
+</ParamField>
+
+<ParamField path="hint_count" type="int" required>
+  Number of words the hint relates to
+</ParamField>
+
+<ParamField path="board_words" type="List[str]" required>
+  All words on the board
+</ParamField>
+
+<ParamField path="revealed_words" type="List[str]" required>
+  List of already revealed words
+</ParamField>
+
+**Returns:** `List[str]` - Validated list of guesses
+
+```python
+guesses = guesser.make_guesses(
+    hint_word="ocean",
+    hint_count=3,
+    board_words=["whale", "dolphin", "shark", "cat", "dog",
+                 "table", "chair", "explosion"],
+    revealed_words=["car"]
+)
+print(f"Guesses: {guesses}")
+```
+
+#### process_result()
+
+Track guess results for analysis.
+
+<ParamField path="guessed_word" type="str" required>
+  The word that was guessed
+</ParamField>
+
+<ParamField path="was_correct" type="bool" required>
+  Whether it was the team's word
+</ParamField>
+
+<ParamField path="color" type="CardColor" required>
+  The actual color of the word
+</ParamField>
+
+```python
+from game import CardColor
+
+guesser.process_result(
+    guessed_word="whale",
+    was_correct=True,
+    color=CardColor.BLUE
+)
+
+# Check history
+print(guesser.guess_history)
+# [{'word': 'whale', 'correct': True, 'color': 'blue'}]
+```
+
+#### reset()
+
+Reset agent state between games to prevent memory leaks.
+
+```python
+# After a game completes
+guesser.reset()
+assert len(guesser.guess_history) == 0
+```
+
+---
+
+## Factory Functions
+
+Convenience functions for creating agents with provider/model strings.
+
+### create_hint_giver()
+
+Factory function to create a hint giver with a specific provider/model.
+
+<ParamField path="provider" type="str" required>
+  Provider name: "openai", "anthropic", "google", "deepseek", "grok", "llama"
+</ParamField>
+
+<ParamField path="model" type="Optional[str]">
+  Specific model name (uses provider default if not provided)
+</ParamField>
+
+<ParamField path="team" type="Team" default="Team.BLUE">
+  Team for this agent
+</ParamField>
+
+**Returns:** `BAMLHintGiver` - Configured hint giver
+
+```python
+from agents.llm.baml_agents import create_hint_giver
+from game import Team
+
+# With specific model
+hint_giver = create_hint_giver("openai", "gpt-4o", Team.BLUE)
+
+# Using provider default
+hint_giver = create_hint_giver("anthropic", team=Team.RED)
+
+# Google Gemini
+hint_giver = create_hint_giver("google", "gemini-2.5-pro", Team.BLUE)
+```
+
+### create_guesser()
+
+Factory function to create a guesser with a specific provider/model.
+
+<ParamField path="provider" type="str" required>
+  Provider name: "openai", "anthropic", "google", "deepseek", "grok", "llama"
+</ParamField>
+
+<ParamField path="model" type="Optional[str]">
+  Specific model name (uses provider default if not provided)
+</ParamField>
+
+<ParamField path="team" type="Team" default="Team.BLUE">
+  Team for this agent
+</ParamField>
+
+**Returns:** `BAMLGuesser` - Configured guesser
+
+```python
+from agents.llm.baml_agents import create_guesser
+from game import Team
+
+# With specific model
+guesser = create_guesser("openai", "gpt-4o", Team.BLUE)
+
+# Using provider default
+guesser = create_guesser("anthropic", team=Team.RED)
+
+# Google Gemini
+guesser = create_guesser("google", "gemini-2.5-flash", Team.BLUE)
+```
+
+---
+
+## Complete Example
+
+```python
+from game import Game, Team
+from agents.llm.baml_agents import (
+    BAMLHintGiver,
+    BAMLGuesser,
+    BAMLModel,
+    create_hint_giver,
+    create_guesser
+)
+
+# Method 1: Direct instantiation with BAMLModel enum
+blue_hint_giver = BAMLHintGiver(
+    team=Team.BLUE,
+    model=BAMLModel.GPT4O_MINI
+)
+blue_guesser = BAMLGuesser(
+    team=Team.BLUE,
+    model=BAMLModel.GPT4O_MINI
+)
+
+# Method 2: Factory functions with provider strings
+red_hint_giver = create_hint_giver("anthropic", "claude-haiku-4-5-20251001", Team.RED)
+red_guesser = create_guesser("anthropic", "claude-haiku-4-5-20251001", Team.RED)
+
+# Create and run game
+game = Game(
+    blue_hint_giver=blue_hint_giver,
+    blue_guesser=blue_guesser,
+    red_hint_giver=red_hint_giver,
+    red_guesser=red_guesser
+)
+
+result = game.play()
+print(f"Winner: {result.winner.value}")
+print(f"Turns: {result.num_turns}")
+
+# Check guess history
+print(f"Blue guesser history: {blue_guesser.guess_history}")
+
+# Reset for next game
+blue_guesser.reset()
+red_guesser.reset()
+```
+
+---
+
+## Supported Provider/Model Mappings
+
+When using factory functions, these provider/model combinations are supported:
+
+| Provider | Model String | BAMLModel |
+|----------|-------------|----------|
+| `"openai"` | `"gpt-4o-mini"` | `GPT4O_MINI` |
+| `"openai"` | `"gpt-4o"` | `GPT4O` |
+| `"openai"` | `"gpt-4-turbo"` | `GPT4_TURBO` |
+| `"openai"` | `None` (default) | `GPT4O_MINI` |
+| `"anthropic"` | `"claude-sonnet-4-5-20250929"` | `CLAUDE_SONNET_45` |
+| `"anthropic"` | `"claude-haiku-4-5-20251001"` | `CLAUDE_HAIKU_45` |
+| `"anthropic"` | `None` (default) | `CLAUDE_HAIKU_45` |
+| `"google"` | `"gemini-2.5-pro"` | `GEMINI_25_PRO` |
+| `"google"` | `"gemini-2.5-flash"` | `GEMINI_25_FLASH` |
+| `"google"` | `"gemini-2.5-flash-lite"` | `GEMINI_25_FLASH_LITE` |
+| `"google"` | `"gemini-2.0-flash"` | `GEMINI_20_FLASH` |
+| `"google"` | `"gemini-2.0-flash-lite"` | `GEMINI_20_FLASH_LITE` |
+| `"google"` | `None` (default) | `GEMINI_25_FLASH` |
+| `"deepseek"` | `None` (default) | `DEEPSEEK_REASONER` |
+| `"grok"` | `None` (default) | `GROK4` |
+| `"llama"` | `None` (default) | `LLAMA` |

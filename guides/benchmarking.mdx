@@ -1,0 +1,361 @@
+---
+title: Benchmarking
+description: Run systematic benchmarks to evaluate LLM performance in Codenames
+icon: chart-line
+---
+
+## Overview
+
+The benchmark suite tests model combinations by running multiple games and collecting performance metrics. Each model plays at most one role per game to ensure fair evaluation.
+
+## Quick Start
+
+<Steps>
+  <Step title="Run the benchmark">
+    ```bash
+    python benchmark.py
+    ```
+    
+    The script will ask for confirmation before starting.
+  </Step>
+  
+  <Step title="Wait for completion">
+    The benchmark runs multiple games testing different model combinations. Progress is shown in real-time.
+  </Step>
+  
+  <Step title="Analyze results">
+    ```bash
+    python analyze_benchmark_results.py benchmark_results/<result_file>.json
+    ```
+    
+    This generates insights, statistics, and visualizations.
+  </Step>
+</Steps>
+
+## Configuring Benchmarks
+
+### Select Models to Test
+
+Edit `model_config.py` to choose which models are benchmarked:
+
+```python
+def get_benchmark_models() -> list:
+    """Get the list of models for benchmarking."""
+    return [
+        BAMLModel.OPENROUTER_DEVSTRAL,
+        BAMLModel.OPENROUTER_MIMO_V2_FLASH,
+        BAMLModel.OPENROUTER_NEMOTRON_NANO,
+        BAMLModel.OPENROUTER_DEEPSEEK_R1T_CHIMERA,
+        BAMLModel.OPENROUTER_DEEPSEEK_R1T2_CHIMERA,
+        BAMLModel.OPENROUTER_GLM_45_AIR,
+        BAMLModel.OPENROUTER_LLAMA_33_70B,
+        BAMLModel.OPENROUTER_OLMO3_32B,
+    ]
+```
+
+<Note>
+The default configuration uses free OpenRouter models for zero-cost experimentation.
+</Note>
+
+### Adjust Games Per Combination
+
+Modify `GAMES_PER_COMBINATION` in `benchmark.py`:
+
+```python
+# Benchmark settings
+GAMES_PER_COMBINATION = 2  # Increase for more statistical significance
+OUTPUT_DIR = "benchmark_results"
+VERBOSE = True
+```
+
+## How Combinations Work
+
+The benchmark generates combinations where each model plays at most one role per game:
+
+```python
+# Each model can be:
+# - Blue team hint giver
+# - Blue team guesser
+# - Red team hint giver
+# - Red team guesser
+
+# Constraints ensure fair evaluation:
+for blue_hint in BENCHMARK_MODELS:
+    for blue_guess in BENCHMARK_MODELS:
+        if blue_guess != blue_hint:  # Blue team uses different models
+            for red_hint in BENCHMARK_MODELS:
+                if red_hint not in [blue_hint, blue_guess]:  # No overlap with blue
+                    for red_guess in BENCHMARK_MODELS:
+                        if red_guess != red_hint and \
+                           red_guess not in [blue_hint, blue_guess]:  # All unique
+                            # Valid combination!
+                            test_combinations.append(...)
+```
+
+<Info>
+With N models and 4 roles, this produces N × (N-1) × (N-2) × (N-3) combinations.
+
+Example: 8 models = 8 × 7 × 6 × 5 = 1,680 combinations
+</Info>
+
+## Metrics Tracked
+
+The benchmark collects comprehensive statistics:
+
+### Per-Model Metrics
+
+<CardGroup cols={2}>
+  <Card title="Win Rate" icon="trophy">
+    Percentage of games won when playing for a specific team
+  </Card>
+  <Card title="Hint Success Rate" icon="lightbulb">
+    How often hints lead to at least one correct guess
+  </Card>
+  <Card title="Guess Accuracy" icon="bullseye">
+    Percentage of guesses that were correct
+  </Card>
+  <Card title="First Guess Accuracy" icon="target">
+    Success rate of the first guess each turn
+  </Card>
+</CardGroup>
+
+### Per-Combination Metrics
+
+- **Games played**: Total games for this combination
+- **Win rates**: Blue wins, red wins, draws
+- **Average turns**: Turns needed to complete games
+- **Error rate**: Frequency of errors or failures
+
+### Advanced Statistics
+
+```python
+# Per model, per role, per team
+metrics = {
+    'games_played': 0,      # Total games in this role
+    'wins': 0,              # Games won
+    'turns_played': 0,      # Total turns taken
+    'hints_given': 0,       # Total hints (hint givers only)
+    'successful_hints': 0,  # Hints with ≥1 correct guess
+    'guesses_made': 0,      # Total guesses attempted
+    'correct_guesses': 0,   # Correct guesses
+    'wrong_guesses': 0,     # Incorrect guesses
+    'bomb_hits': 0,         # Bomb hits (instant loss)
+    'invalid_offboard': 0,  # Guesses not on board
+    'invalid_revealed': 0,  # Already revealed words
+}
+```
+
+## Benchmark Results
+
+### File Structure
+
+```
+benchmark_results/
+├── benchmark_20260305_143022.json  # Raw benchmark data
+└── analysis_plots/                  # Generated visualizations
+    ├── model_win_rates.png
+    ├── hint_success_rates.png
+    ├── guess_accuracy.png
+    └── turn_efficiency.png
+```
+
+### Result Format
+
+The JSON file contains:
+
+```json
+{
+  "benchmark_id": "benchmark_20260305_143022",
+  "timestamp": "2026-03-05T14:30:22.123456",
+  "total_combinations": 1680,
+  "total_games": 3360,
+  "model_performance": {
+    "OpenRouterDevstral_hint_giver_blue": {
+      "model": "OpenRouterDevstral",
+      "role": "hint_giver",
+      "team": "blue",
+      "games_played": 420,
+      "wins": 245,
+      "hints_given": 1834,
+      "successful_hints": 1567
+    }
+  },
+  "team_combinations": { ... },
+  "games": [ ... ]
+}
+```
+
+## Analysis Pipeline
+
+The analysis script processes results through a modular pipeline:
+
+<Steps>
+  <Step title="Load data">
+    Read the benchmark JSON file
+  </Step>
+  
+  <Step title="Calculate metrics">
+    Compute win rates, accuracy, efficiency
+  </Step>
+  
+  <Step title="Generate insights">
+    Identify patterns and top performers
+  </Step>
+  
+  <Step title="Create visualizations">
+    Generate charts and plots
+  </Step>
+  
+  <Step title="Write report">
+    Save markdown report with findings
+  </Step>
+</Steps>
+
+### Running Analysis
+
+<Tabs>
+  <Tab title="With Plots">
+    ```bash
+    python analyze_benchmark_results.py benchmark_results/benchmark_20260305_143022.json
+    ```
+    
+    Generates full analysis with visualizations.
+  </Tab>
+  
+  <Tab title="Text Only">
+    ```bash
+    python analyze_benchmark_results.py benchmark_results/benchmark_20260305_143022.json --no-plots
+    ```
+    
+    Generates insights report without creating plot files.
+  </Tab>
+</Tabs>
+
+## Programmatic Benchmarking
+
+Run benchmarks programmatically for custom workflows:
+
+```python
+from benchmark import BenchmarkRunner
+from agents.llm import BAMLModel
+
+# Create runner
+runner = BenchmarkRunner(
+    games_per_combination=3,
+    verbose=True
+)
+
+# Run benchmark
+result = runner.run()
+
+# Save results
+main_file = result.save("my_benchmark_results")
+print(f"Results saved to: {main_file}")
+
+# Access data
+for model_key, metrics in result.model_performance.items():
+    if metrics['games_played'] > 0:
+        win_rate = metrics['wins'] / metrics['games_played']
+        print(f"{model_key}: {win_rate:.1%} win rate")
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Start with small tests">
+    Begin with 1-2 games per combination to verify setup:
+    
+    ```python
+    GAMES_PER_COMBINATION = 1  # Quick validation run
+    ```
+    
+    Then increase for production benchmarks:
+    
+    ```python
+    GAMES_PER_COMBINATION = 5  # Better statistical significance
+    ```
+  </Accordion>
+  
+  <Accordion title="Use free models first">
+    Test your benchmark setup with free OpenRouter models before running expensive models:
+    
+    ```python
+    BENCHMARK_MODELS = [
+        BAMLModel.OPENROUTER_DEVSTRAL,
+        BAMLModel.OPENROUTER_MIMO_V2_FLASH,
+    ]
+    ```
+  </Accordion>
+  
+  <Accordion title="Monitor API costs">
+    Track costs during benchmarks:
+    
+    - Set spending limits in provider dashboards
+    - Use cost estimation before running
+    - Monitor usage during execution
+    
+    See [Cost Management](/guides/cost-management) for details.
+  </Accordion>
+  
+  <Accordion title="Check for temperature restrictions">
+    Some models require specific temperature settings:
+    
+    ```python
+    # The benchmark validates models automatically
+    runner._validate_models()  # Warns about restrictions
+    
+    # o-series models require temperature=1.0
+    BAMLModel.O1, BAMLModel.O3, BAMLModel.O4_MINI
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Interpreting Results
+
+Key metrics to evaluate:
+
+### Model Performance
+
+- **Win rate > 60%**: Strong performer
+- **Hint success > 70%**: Effective spymaster
+- **Guess accuracy > 60%**: Reliable operative
+- **First guess accuracy > 50%**: Good hint interpretation
+
+### Team Synergies
+
+Some model combinations work better together:
+
+```
+Top combination: GPT-5 Mini + GPT-5 Mini vs Claude Sonnet 4.5 + Claude Sonnet 4.5
+Blue Win Rate: 73.2% (41/56 games)
+Avg Turns: 12.4
+```
+
+Look for patterns in successful pairings.
+
+## Troubleshooting
+
+<Warning>
+**Rate limits**: If you hit rate limits, the benchmark will retry with exponential backoff. Consider:
+- Reducing `GAMES_PER_COMBINATION`
+- Using fewer models
+- Spreading runs across multiple days
+</Warning>
+
+<Warning>
+**Long runtime**: Large benchmarks take time. Example:
+- 8 models × 2 games = ~6-8 hours
+- Use `VERBOSE=True` to monitor progress
+- Results are saved incrementally
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Model Selection" icon="robot" href="/guides/model-selection">
+    Choose the best models for your use case
+  </Card>
+  <Card title="Cost Management" icon="dollar-sign" href="/guides/cost-management">
+    Estimate and optimize benchmark costs
+  </Card>
+</CardGroup>

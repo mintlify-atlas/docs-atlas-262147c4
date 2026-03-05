@@ -1,97 +1,128 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Codenames AI Benchmark"
+description: "AI benchmark where language models compete in Codenames to evaluate LLM performance across multiple providers"
 ---
 
-## Setting up
+<div style={{
+  background: 'linear-gradient(135deg, #9ba9b9 0%, #cfd9e1 100%)',
+  borderRadius: '8px',
+  padding: '48px 32px',
+  marginBottom: '32px',
+  color: '#1A1A1A'
+}}>
+  <h1 style={{
+    fontSize: '40px',
+    fontWeight: '700',
+    marginBottom: '16px',
+    color: '#1A1A1A'
+  }}>
+    Codenames AI Benchmark
+  </h1>
+  <p style={{
+    fontSize: '18px',
+    marginBottom: '24px',
+    color: '#1A1A1A',
+    opacity: 0.9
+  }}>
+    Evaluate LLM performance through competitive Codenames gameplay. Test 80+ models across OpenAI, Anthropic, Google Gemini, xAI, DeepSeek, and OpenRouter with BAML-powered type-safe agents.
+  </p>
+  <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
+    <a href="/quickstart" style={{
+      background: '#5c6def',
+      color: '#ffffff',
+      padding: '12px 24px',
+      borderRadius: '6px',
+      textDecoration: 'none',
+      fontWeight: '600',
+      display: 'inline-block'
+    }}>
+      Get Started
+    </a>
+    <a href="https://github.com/DeweyMarco/code-names-benchmark" style={{
+      background: '#ffffff',
+      color: '#000000',
+      padding: '12px 24px',
+      borderRadius: '6px',
+      textDecoration: 'none',
+      fontWeight: '600',
+      display: 'inline-block',
+      border: '1px solid #e6e6e6'
+    }}>
+      View on GitHub
+    </a>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+## Key Features
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="BAML-Powered Agents" icon="brain" href="/concepts/baml">
+    Universal LLM agents with type-safe structured outputs and automatic validation
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Multi-Provider Support" icon="network-wired" href="/guides/model-selection">
+    80+ models from OpenAI, Anthropic, Google, xAI, DeepSeek, and OpenRouter
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Comprehensive Benchmarking" icon="chart-line" href="/guides/benchmarking">
+    Test model combinations with configurable game settings and analysis
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Advanced Analytics" icon="microscope" href="/advanced/analysis-metrics">
+    ELO ratings, win rates, efficiency metrics, momentum tracking, and error patterns
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Quick Start
 
-Everything you need to create world-class documentation.
+<Steps>
+  <Step title="Install Dependencies">
+    Clone the repository and install Python dependencies
+    
+    ```bash
+    git clone https://github.com/DeweyMarco/code-names-benchmark.git
+    cd code-names-benchmark
+    pip install -r requirements.txt
+    ```
+  </Step>
+  
+  <Step title="Configure API Keys">
+    Set up your API keys for the providers you want to test
+    
+    ```bash
+    cp .env.example .env
+    # Edit .env with your API keys
+    ```
+  </Step>
+  
+  <Step title="Run Your First Game">
+    Test with free OpenRouter models or your own
+    
+    ```bash
+    python demo_simple_game.py
+    ```
+  </Step>
+</Steps>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Why Codenames?
 
-## Need inspiration?
+Codenames is an ideal benchmark for evaluating language model capabilities:
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+- **Semantic Understanding** — Models must understand word relationships and associations
+- **Strategic Reasoning** — Balancing risk vs. reward when giving hints
+- **Communication** — Coordinating between two models (hint giver and guesser)
+- **Error Handling** — Dealing with ambiguous hints and uncertain guesses
+
+## Get Started
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Get up and running in 5 minutes
+  </Card>
+  <Card title="Game Mechanics" icon="chess" href="/concepts/game-mechanics">
+    Learn how the game works
+  </Card>
+  <Card title="Model Selection" icon="sliders" href="/guides/model-selection">
+    Choose the right models for testing
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/game/board">
+    Explore the complete API
+  </Card>
+</CardGroup>

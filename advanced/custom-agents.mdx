@@ -1,0 +1,389 @@
+---
+title: 'Building Custom Agents'
+description: 'Create custom Codenames agents with Python by extending base classes'
+icon: 'robot'
+---
+
+## Overview
+
+The Codenames AI Benchmark provides abstract base classes for creating custom agents. You can implement your own hint givers (spymasters) and guessers (field operatives) using any strategy or LLM provider.
+
+## Agent Architecture
+
+All agents inherit from two base classes defined in `agents/base.py`:
+
+- **HintGiver**: Sees all card colors, provides hints
+- **Guesser**: Only sees board words, makes guesses based on hints
+
+## Base Classes
+
+### HintGiver Base Class
+
+The `HintGiver` abstract class defines the interface for spymaster agents:
+
+```python agents/base.py
+from abc import ABC, abstractmethod
+from typing import List, Tuple
+from dataclasses import dataclass
+from game import Team, CardColor
+
+@dataclass
+class HintResponse:
+    """Response from a hint giver."""
+    word: str
+    count: int
+    
+    def validate(self) -> Tuple[bool, str]:
+        """Validate the hint response."""
+        if not self.word or not isinstance(self.word, str):
+            return False, "Hint word must be a non-empty string"
+        
+        if not isinstance(self.count, int) or self.count < 1:
+            return False, "Hint count must be a positive integer"
+        
+        if ' ' in self.word.strip():
+            return False, "Hint must be a single word (no spaces)"
+        
+        return True, ""
+
+class HintGiver(ABC):
+    """Abstract base class for hint giver (spymaster) agents."""
+    
+    def __init__(self, team: Team):
+        self.team = team
+    
+    def get_model_name(self) -> str:
+        """Return the model identifier."""
+        return self.__class__.__name__
+    
+    @abstractmethod
+    def give_hint(
+        self,
+        my_words: List[str],
+        opponent_words: List[str],
+        neutral_words: List[str],
+        bomb_words: List[str],
+        revealed_words: List[str],
+        board_words: List[str]
+    ) -> HintResponse:
+        """Generate a hint for the team."""
+        pass
+```
+
+### Guesser Base Class
+
+The `Guesser` abstract class defines the interface for field operative agents:
+
+```python agents/base.py
+class Guesser(ABC):
+    """Abstract base class for guesser (field operative) agents."""
+    
+    def __init__(self, team: Team):
+        self.team = team
+    
+    def get_model_name(self) -> str:
+        """Return the model identifier."""
+        return self.__class__.__name__
+    
+    @abstractmethod
+    def make_guesses(
+        self,
+        hint_word: str,
+        hint_count: int,
+        board_words: List[str],
+        revealed_words: List[str]
+    ) -> List[str]:
+        """Make guesses based on the hint."""
+        pass
+    
+    def process_result(self, guessed_word: str, was_correct: bool, color: CardColor):
+        """Optional feedback method called after each guess."""
+        pass
+    
+    def reset(self):
+        """Reset agent state between games."""
+        pass
+```
+
+## Creating a Simple Agent
+
+Here's a complete example of a simple random agent implementation:
+
+```python agents/random_agents.py
+import random
+from typing import List
+from game import Team, CardColor
+from agents.base import HintGiver, Guesser, HintResponse
+
+class RandomHintGiver(HintGiver):
+    """Gives random hints for testing."""
+    
+    def give_hint(
+        self,
+        my_words: List[str],
+        opponent_words: List[str],
+        neutral_words: List[str],
+        bomb_words: List[str],
+        revealed_words: List[str],
+        board_words: List[str]
+    ) -> HintResponse:
+        """Give a random hint."""
+        if not my_words:
+            return HintResponse(word="pass", count=1)
+        
+        # Generate random hint
+        hint_word = f"hint_{random.randint(1, 100)}"
+        count = min(len(my_words), random.randint(1, 3))
+        
+        return HintResponse(word=hint_word, count=count)
+
+class RandomGuesser(Guesser):
+    """Makes random guesses for testing."""
+    
+    def make_guesses(
+        self,
+        hint_word: str,
+        hint_count: int,
+        board_words: List[str],
+        revealed_words: List[str]
+    ) -> List[str]:
+        """Make random guesses."""
+        unrevealed = [w for w in board_words if w not in revealed_words]
+        
+        if not unrevealed:
+            return []
+        
+        # Guess up to hint_count words randomly
+        num_guesses = min(hint_count, len(unrevealed))
+        guesses = random.sample(unrevealed, num_guesses)
+        
+        return guesses
+    
+    def process_result(self, guessed_word: str, was_correct: bool, color: CardColor):
+        """Random agent doesn't learn from results."""
+        pass
+```
+
+## LLM-Based Agents with BAML
+
+For LLM-based agents, use the BAML framework which handles prompt templating and structured outputs:
+
+```python agents/llm/baml_agents.py
+from agents.base import HintGiver, Guesser, HintResponse
+from baml_client.baml_client.sync_client import b
+from baml_py import ClientRegistry
+from enum import Enum
+
+class BAMLModel(Enum):
+    """Available BAML client models."""
+    GPT4O_MINI = "GPT4oMini"
+    GPT4O = "GPT4o"
+    CLAUDE_SONNET_45 = "ClaudeSonnet45"
+    GEMINI_25_FLASH = "Gemini25Flash"
+    # ... more models
+
+class BAMLHintGiver(HintGiver):
+    """Universal BAML-based hint giver for any LLM provider."""
+    
+    def __init__(self, team: Team, model: BAMLModel = BAMLModel.GPT4O_MINI):
+        super().__init__(team)
+        self.model = model
+        self._registry = ClientRegistry()
+        self._registry.set_primary(model.value)
+    
+    def get_model_name(self) -> str:
+        return self.model.value
+    
+    def give_hint(
+        self,
+        my_words: List[str],
+        opponent_words: List[str],
+        neutral_words: List[str],
+        bomb_words: List[str],
+        revealed_words: List[str],
+        board_words: List[str]
+    ) -> HintResponse:
+        # Call BAML function with configured registry
+        baml_response = b.GiveHint(
+            team=self.team.value,
+            my_words=my_words,
+            opponent_words=opponent_words,
+            neutral_words=neutral_words,
+            bomb_words=bomb_words,
+            revealed_words=revealed_words,
+            baml_options={"client_registry": self._registry}
+        )
+        
+        return HintResponse(
+            word=baml_response.word,
+            count=baml_response.count
+        )
+```
+
+## Agent Guidelines
+
+<CardGroup cols={2}>
+  <Card title="Hint Validation" icon="check">
+    - Return single-word hints (no spaces)
+    - Provide positive integer counts
+    - Avoid board words in hints
+    - Consider bomb avoidance
+  </Card>
+  
+  <Card title="Guess Strategy" icon="brain">
+    - Return 1 to (hint_count + 1) guesses
+    - Order by confidence (best first)
+    - Only guess unrevealed words
+    - Empty list passes the turn
+  </Card>
+  
+  <Card title="State Management" icon="database">
+    - Implement `reset()` for reusable agents
+    - Use `process_result()` for learning
+    - Track history in instance variables
+    - Clean up between games
+  </Card>
+  
+  <Card title="Error Handling" icon="shield">
+    - Handle LLM API failures gracefully
+    - Validate input parameters
+    - Log errors for debugging
+    - Return valid fallback responses
+  </Card>
+</CardGroup>
+
+## Testing Your Agent
+
+Create a simple test script to verify your agent:
+
+```python test_agent.py
+from game import Team
+from agents.base import HintGiver, Guesser, HintResponse
+from your_agent import YourHintGiver, YourGuesser
+
+# Test hint giver
+hint_giver = YourHintGiver(Team.BLUE)
+response = hint_giver.give_hint(
+    my_words=["dog", "cat", "mouse"],
+    opponent_words=["tree", "rock"],
+    neutral_words=["table", "chair"],
+    bomb_words=["bomb"],
+    revealed_words=[],
+    board_words=["dog", "cat", "mouse", "tree", "rock", "table", "chair", "bomb"]
+)
+
+print(f"Hint: {response.word} ({response.count})")
+
+# Validate hint
+is_valid, error = response.validate()
+if not is_valid:
+    print(f"Invalid hint: {error}")
+
+# Test guesser
+guesser = YourGuesser(Team.BLUE)
+guesses = guesser.make_guesses(
+    hint_word="animal",
+    hint_count=3,
+    board_words=["dog", "cat", "mouse", "tree", "rock"],
+    revealed_words=[]
+)
+
+print(f"Guesses: {guesses}")
+```
+
+## Using Custom Agents in Benchmarks
+
+Once your agent is implemented, use it in the orchestrator:
+
+```python run_custom_benchmark.py
+from orchestrator import Orchestrator
+from game import Team
+from your_agent import YourHintGiver, YourGuesser
+from agents.random_agents import RandomHintGiver, RandomGuesser
+
+# Create orchestrator
+orchestrator = Orchestrator(verbose=True)
+
+# Run game with custom agents
+result = orchestrator.play_game(
+    blue_hint_giver=YourHintGiver(Team.BLUE),
+    blue_guesser=YourGuesser(Team.BLUE),
+    red_hint_giver=RandomHintGiver(Team.RED),
+    red_guesser=RandomGuesser(Team.RED)
+)
+
+print(f"Winner: {result.winner}")
+print(f"Total turns: {result.total_turns}")
+```
+
+## Advanced Techniques
+
+### Stateful Agents
+
+Track game state for adaptive strategies:
+
+```python
+class StatefulGuesser(Guesser):
+    def __init__(self, team: Team):
+        super().__init__(team)
+        self.guess_history = []
+        self.failed_hints = set()
+    
+    def make_guesses(self, hint_word, hint_count, board_words, revealed_words):
+        # Use history to inform current guesses
+        if hint_word in self.failed_hints:
+            # Be more conservative
+            return []
+        
+        # Make guesses...
+        return guesses
+    
+    def process_result(self, guessed_word, was_correct, color):
+        self.guess_history.append({
+            'word': guessed_word,
+            'correct': was_correct,
+            'color': color.value
+        })
+    
+    def reset(self):
+        self.guess_history = []
+        self.failed_hints = set()
+```
+
+### Multi-Model Ensembles
+
+Combine multiple LLMs for better performance:
+
+```python
+class EnsembleHintGiver(HintGiver):
+    def __init__(self, team: Team, models: List[BAMLModel]):
+        super().__init__(team)
+        self.hint_givers = [BAMLHintGiver(team, m) for m in models]
+    
+    def give_hint(self, my_words, opponent_words, neutral_words, 
+                  bomb_words, revealed_words, board_words):
+        # Get hints from all models
+        hints = []
+        for hg in self.hint_givers:
+            try:
+                hint = hg.give_hint(my_words, opponent_words, neutral_words,
+                                   bomb_words, revealed_words, board_words)
+                hints.append(hint)
+            except Exception:
+                continue
+        
+        # Vote or select best hint
+        return self._select_best_hint(hints)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Prompt Engineering" href="/advanced/prompt-engineering" icon="wand-magic-sparkles">
+    Optimize your LLM prompts for better performance
+  </Card>
+  
+  <Card title="Analysis Metrics" href="/advanced/analysis-metrics" icon="chart-line">
+    Measure and analyze agent performance
+  </Card>
+</CardGroup>

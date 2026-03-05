@@ -1,0 +1,479 @@
+---
+title: Configuration
+description: Customize game rules, behavior, and settings
+icon: gear
+---
+
+## Configuration System
+
+The benchmark uses a centralized configuration system in `config.py` with four main sections:
+
+<CardGroup cols={2}>
+  <Card title="GameConfig" icon="chess-board">
+    Board size, word counts, turn limits
+  </Card>
+  <Card title="LLMConfig" icon="robot">
+    Temperature, tokens, timeouts, retries
+  </Card>
+  <Card title="OrchestratorConfig" icon="sitemap">
+    Logging, validation, results storage
+  </Card>
+  <Card title="DataConfig" icon="database">
+    Word lists, file paths, caching
+  </Card>
+</CardGroup>
+
+## Game Configuration
+
+### Default Settings
+
+```python
+from config import Config
+
+# Use default configuration
+config = Config.default()
+
+# Access game settings
+config.game.BOARD_SIZE        # 25
+config.game.BLUE_WORDS         # 9
+config.game.RED_WORDS          # 8
+config.game.NEUTRAL_WORDS      # 7
+config.game.BOMB_COUNT         # 1
+config.game.MAX_TURNS          # 50
+config.game.STARTING_TEAM      # "BLUE"
+```
+
+### Custom Board Sizes
+
+<Tabs>
+  <Tab title="Mini Game">
+    ```python
+    from config import Config
+    
+    # 9-word board for quick games
+    mini_config = Config.custom_game(board_size=9)
+    
+    # Automatically calculates:
+    # - Blue: 4 words (starting team)
+    # - Red: 3 words
+    # - Neutral: 1 word
+    # - Bomb: 1 word
+    ```
+  </Tab>
+  
+  <Tab title="Large Game">
+    ```python
+    from config import Config
+    
+    # 49-word board for extended games
+    large_config = Config.custom_game(board_size=49)
+    
+    # Automatically calculates:
+    # - Blue: 17 words (starting team)
+    # - Red: 16 words
+    # - Neutral: 15 words
+    # - Bomb: 1 word
+    ```
+  </Tab>
+  
+  <Tab title="Custom Starting Team">
+    ```python
+    from config import Config
+    
+    # Red team starts
+    red_start = Config.custom_game(
+        board_size=25,
+        starting_team="RED"
+    )
+    
+    # Now red has 9 words, blue has 8
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+Board size must be odd for fair play. The system automatically validates and calculates proportional word distributions.
+</Warning>
+
+### Hint Count Limits
+
+```python
+from config import GameConfig
+
+config = GameConfig(
+    MIN_HINT_COUNT=1,   # Minimum hint number
+    MAX_HINT_COUNT=9,   # Maximum hint number
+)
+```
+
+### Guess Limits
+
+```python
+config.game.MAX_GUESSES_PER_TURN = None  # Default: hint_count + 1
+config.game.MAX_GUESSES_PER_TURN = 5     # Hard limit: 5 guesses
+```
+
+<Note>
+Setting `MAX_GUESSES_PER_TURN=None` allows `hint_count + 1` guesses (standard Codenames rules).
+</Note>
+
+## LLM Configuration
+
+### Temperature Settings
+
+```python
+from config import LLMConfig
+
+llm_config = LLMConfig(
+    DEFAULT_TEMPERATURE=0.7,  # Balance creativity/consistency
+    MIN_TEMPERATURE=0.0,      # Deterministic
+    MAX_TEMPERATURE=2.0,      # Maximum creativity
+)
+```
+
+<Info>
+Temperature is configured per-model in `model_config.py`. Reasoning models (o-series) require `temperature=1.0`.
+</Info>
+
+### Response Settings
+
+```python
+llm_config = LLMConfig(
+    MAX_TOKENS=1024,           # Maximum response length
+    RESPONSE_TIMEOUT=30,       # Timeout in seconds
+)
+```
+
+### Retry Logic
+
+```python
+llm_config = LLMConfig(
+    MAX_RETRIES=3,             # Number of retry attempts
+    RETRY_DELAY=1.0,           # Base delay (exponential backoff)
+)
+```
+
+Retry behavior:
+1. First retry: 5 seconds
+2. Second retry: 10 seconds  
+3. Third retry: 20 seconds
+4. Each with +0-2s jitter
+
+### Default Models
+
+```python
+llm_config = LLMConfig(
+    OPENAI_DEFAULT_MODEL="gpt-4o-mini",
+    ANTHROPIC_DEFAULT_MODEL="claude-sonnet-4-5-20250929",
+    GEMINI_DEFAULT_MODEL="gemini-2.5-flash",
+    GROK_DEFAULT_MODEL="grok-beta",
+    DEEPSEEK_DEFAULT_MODEL="deepseek-chat",
+    LLAMA_DEFAULT_MODEL="llama-3.3-70b",
+)
+```
+
+## Orchestrator Configuration
+
+### Logging
+
+```python
+from config import OrchestratorConfig
+
+orchestrator_config = OrchestratorConfig(
+    VERBOSE_DEFAULT=True,          # Print game progress
+    LOG_TO_FILE=False,             # Save logs to file
+    LOG_FILE_PATH="game_logs/",   # Log directory
+)
+```
+
+### Results Storage
+
+```python
+orchestrator_config = OrchestratorConfig(
+    SAVE_RESULTS=True,                # Save game results
+    RESULTS_PATH="game_results/",    # Results directory
+    RESULT_FORMAT="json",             # Format: json, csv, or both
+)
+```
+
+### Timing
+
+```python
+orchestrator_config = OrchestratorConfig(
+    TURN_DELAY=0.0,    # Delay between turns (for demos)
+    GUESS_DELAY=0.0,   # Delay between guesses (for demos)
+)
+```
+
+### Validation
+
+```python
+orchestrator_config = OrchestratorConfig(
+    STRICT_VALIDATION=True,      # Enforce strict rules
+    ALLOW_INVALID_HINTS=False,   # Reject hints matching board words
+)
+```
+
+<Warning>
+Disabling `STRICT_VALIDATION` can lead to invalid game states. Use only for testing.
+</Warning>
+
+## Data Configuration
+
+### Word Lists
+
+```python
+from config import DataConfig
+
+data_config = DataConfig(
+    WORD_LIST_PATH="utils/words.csv",
+    MIN_WORDS_IN_POOL=100,        # Minimum words needed
+    CACHE_WORD_LIST=True,         # Cache in memory
+)
+```
+
+### File Paths
+
+```python
+data_config = DataConfig(
+    ENV_FILE=".env",
+    ENV_EXAMPLE_FILE=".env.example",
+)
+```
+
+### Reproducibility
+
+```python
+data_config = DataConfig(
+    DEMO_RANDOM_SEED=42,  # Set for reproducible demos
+)
+```
+
+## Using Configuration
+
+### In GameRunner
+
+```python
+from config import Config
+from orchestrator import GameRunner
+
+config = Config.custom_game(board_size=49)
+
+runner = GameRunner(
+    board=board,
+    blue_hint_giver=blue_hint,
+    blue_guesser=blue_guess,
+    red_hint_giver=red_hint,
+    red_guesser=red_guess,
+    max_turns=config.game.MAX_TURNS,
+    verbose=config.orchestrator.VERBOSE_DEFAULT,
+    config=config.orchestrator,
+    llm_config=config.llm,
+)
+```
+
+### In Board Creation
+
+```python
+from game import Board
+from config import Config
+
+config = Config.custom_game(board_size=49)
+words = generate_word_list(config.game.BOARD_SIZE)
+board = Board(words, config=config.game)
+```
+
+### In Benchmarks
+
+```python
+from benchmark import BenchmarkRunner
+from config import Config
+
+config = Config.default()
+config.game.MAX_TURNS = 30  # Shorter games
+
+runner = BenchmarkRunner(
+    games_per_combination=5,
+    verbose=True
+)
+runner.config = config
+
+result = runner.run()
+```
+
+## Complete Configuration Example
+
+```python
+from config import Config, GameConfig, LLMConfig, OrchestratorConfig
+
+# Create custom configuration
+config = Config()
+
+# Customize game settings
+config.game = GameConfig(
+    BOARD_SIZE=25,
+    BLUE_WORDS=9,
+    RED_WORDS=8,
+    NEUTRAL_WORDS=7,
+    BOMB_COUNT=1,
+    MAX_TURNS=40,
+    MAX_GUESSES_PER_TURN=None,
+    STARTING_TEAM="BLUE",
+    MIN_HINT_COUNT=1,
+    MAX_HINT_COUNT=9,
+)
+
+# Customize LLM settings
+config.llm = LLMConfig(
+    DEFAULT_TEMPERATURE=0.7,
+    MAX_TOKENS=1024,
+    RESPONSE_TIMEOUT=30,
+    MAX_RETRIES=3,
+    RETRY_DELAY=1.0,
+)
+
+# Customize orchestrator
+config.orchestrator = OrchestratorConfig(
+    VERBOSE_DEFAULT=True,
+    SAVE_RESULTS=True,
+    RESULTS_PATH="my_results/",
+    RESULT_FORMAT="json",
+    STRICT_VALIDATION=True,
+)
+
+# Validate configuration
+config.validate()
+
+# Export to dict
+config_dict = config.to_dict()
+```
+
+## Configuration Validation
+
+The system automatically validates configurations:
+
+```python
+from config import GameConfig
+
+# Valid configuration
+valid_config = GameConfig(
+    BOARD_SIZE=25,
+    BLUE_WORDS=9,
+    RED_WORDS=8,
+    NEUTRAL_WORDS=7,
+    BOMB_COUNT=1,
+)
+valid_config.validate()  # Returns True
+
+# Invalid configuration
+invalid_config = GameConfig(
+    BOARD_SIZE=26,  # Even number!
+    BLUE_WORDS=10,
+    RED_WORDS=10,
+    NEUTRAL_WORDS=5,
+    BOMB_COUNT=1,
+)
+invalid_config.validate()  # Raises ValueError
+```
+
+Validation checks:
+- Board size is odd
+- Board size ≥ 9
+- Word counts sum to board size
+- Hint counts are valid
+
+## Model-Specific Configuration
+
+Model settings are in `model_config.py`:
+
+```python
+from model_config import MODEL_CONFIGS, get_model_config
+from agents.llm import BAMLModel
+
+# Get model configuration
+config = get_model_config(BAMLModel.GPT5_MINI)
+print(config)  # {'temperature': 0.7}
+
+# O-series models have restrictions
+config = get_model_config(BAMLModel.O3_MINI)
+print(config)  # {'temperature': 1.0}
+```
+
+See [Model Selection](/guides/model-selection) for details.
+
+## Environment Variables
+
+Configuration also supports environment variables:
+
+```bash
+# API Keys
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_API_KEY=AIza...
+
+# Optional: Override defaults
+MAX_TURNS=30
+VERBOSE=true
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Config.default() for standard games">
+    ```python
+    config = Config.default()
+    ```
+    
+    Only customize when you need non-standard behavior.
+  </Accordion>
+  
+  <Accordion title="Validate custom configurations">
+    ```python
+    config = Config()
+    config.game = GameConfig(...)
+    config.validate()  # Always validate!
+    ```
+  </Accordion>
+  
+  <Accordion title="Store configurations with results">
+    ```python
+    result = runner.run()
+    config_dict = config.to_dict()
+    
+    # Save together
+    output = {
+        'result': result.to_dict(),
+        'config': config_dict,
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Use custom_game() for variant sizes">
+    ```python
+    # Better than manual configuration
+    mini = Config.custom_game(board_size=9)
+    
+    # Instead of:
+    manual = Config()
+    manual.game.BOARD_SIZE = 9
+    manual.game.BLUE_WORDS = ...  # Error-prone!
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Running Games" icon="play" href="/guides/running-games">
+    Apply your configuration to games
+  </Card>
+  <Card title="Model Selection" icon="robot" href="/guides/model-selection">
+    Configure model-specific settings
+  </Card>
+  <Card title="Benchmarking" icon="chart-line" href="/guides/benchmarking">
+    Use configuration in benchmarks
+  </Card>
+  <Card title="Cost Management" icon="dollar-sign" href="/guides/cost-management">
+    Review cost configurations
+  </Card>
+</CardGroup>

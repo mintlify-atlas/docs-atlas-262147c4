@@ -1,0 +1,337 @@
+---
+title: 'Types'
+description: 'Type definitions and enums for the Codenames game engine'
+---
+
+## Overview
+
+This page documents the core type definitions, enums, and data classes used throughout the Codenames game engine.
+
+## Enums
+
+### Team
+
+Represents the two teams in Codenames.
+
+```python
+from game import Team
+
+# Available values
+Team.RED   # Red team
+Team.BLUE  # Blue team
+
+# Access string value
+team = Team.BLUE
+print(team.value)  # "blue"
+```
+
+<CardGroup cols={2}>
+  <Card title="Team.RED" icon="circle" color="#ef4444">
+    Red team
+  </Card>
+  <Card title="Team.BLUE" icon="circle" color="#3b82f6">
+    Blue team
+  </Card>
+</CardGroup>
+
+### CardColor
+
+Represents the color/type of a card on the board.
+
+```python
+from game import CardColor
+
+# Available values
+CardColor.RED      # Red team word
+CardColor.BLUE     # Blue team word
+CardColor.NEUTRAL  # Neutral bystander
+CardColor.BOMB     # Assassin (game-ending)
+
+# Access string value
+color = CardColor.BOMB
+print(color.value)  # "bomb"
+```
+
+<CardGroup cols={2}>
+  <Card title="CardColor.RED" icon="square" color="#ef4444">
+    Red team word
+  </Card>
+  <Card title="CardColor.BLUE" icon="square" color="#3b82f6">
+    Blue team word
+  </Card>
+  <Card title="CardColor.NEUTRAL" icon="square" color="#9ca3af">
+    Neutral bystander word
+  </Card>
+  <Card title="CardColor.BOMB" icon="square" color="#1f2937">
+    Assassin word - ends game immediately
+  </Card>
+</CardGroup>
+
+### GameOutcome
+
+Represents possible game outcomes.
+
+```python
+from game import GameOutcome
+
+# Available values
+GameOutcome.RED_WIN      # Red team won
+GameOutcome.BLUE_WIN     # Blue team won
+GameOutcome.IN_PROGRESS  # Game still in progress
+
+# Access string value
+outcome = GameOutcome.BLUE_WIN
+print(outcome.value)  # "blue_win"
+```
+
+<CardGroup cols={3}>
+  <Card title="RED_WIN" icon="trophy" color="#ef4444">
+    Red team has won
+  </Card>
+  <Card title="BLUE_WIN" icon="trophy" color="#3b82f6">
+    Blue team has won
+  </Card>
+  <Card title="IN_PROGRESS" icon="clock">
+    Game is still active
+  </Card>
+</CardGroup>
+
+## Data Classes
+
+### TurnResult
+
+Result of a single guess during a turn.
+
+<ParamField path="word" type="str">
+  The word that was guessed.
+</ParamField>
+
+<ParamField path="color" type="CardColor">
+  The actual color of the guessed word.
+</ParamField>
+
+<ParamField path="correct" type="bool">
+  Whether the guess was correct for the current team.
+</ParamField>
+
+<ParamField path="hit_bomb" type="bool" default="False">
+  Whether the guess hit the bomb/assassin.
+</ParamField>
+
+```python
+from game import TurnResult, CardColor
+
+# TurnResult is returned by GameState.make_guess()
+result = game.make_guess("apple")
+
+print(f"Word: {result.word}")
+print(f"Color: {result.color.value}")
+print(f"Correct: {result.correct}")
+print(f"Hit bomb: {result.hit_bomb}")
+
+# String representation
+print(result)
+# Output: apple (blue) ✓
+# Or: apple (bomb) 💣 BOMB!
+```
+
+#### String Representation
+
+TurnResult provides a human-readable string format:
+
+- Correct guess: `word (color) ✓`
+- Incorrect guess: `word (color) ✗`
+- Bomb: `word (bomb) 💣 BOMB!`
+
+### Turn
+
+Represents a complete turn (hint + guesses).
+
+<ParamField path="team" type="Team">
+  The team taking the turn.
+</ParamField>
+
+<ParamField path="turn_number" type="int">
+  The turn number.
+</ParamField>
+
+<ParamField path="hint_word" type="str">
+  The hint word given by the spymaster.
+</ParamField>
+
+<ParamField path="hint_count" type="int">
+  Number of words the hint relates to.
+</ParamField>
+
+<ParamField path="guesses" type="List[TurnResult]" default="[]">
+  List of guess results made during this turn.
+</ParamField>
+
+<ParamField path="invalid_guess_word" type="str | None" default="None">
+  Word of an invalid guess attempt, if any.
+</ParamField>
+
+<ParamField path="invalid_guess_reason" type="str | None" default="None">
+  Reason why the guess was invalid.
+</ParamField>
+
+```python
+from game import Turn, Team, TurnResult, CardColor
+
+# Turns are created internally by GameState
+# Access them from turn_history
+for turn in game.turn_history:
+    print(f"Turn {turn.turn_number} - {turn.team.value}")
+    print(f"Hint: {turn.hint_word} ({turn.hint_count})")
+    
+    for guess in turn.guesses:
+        status = "✓" if guess.correct else "✗"
+        print(f"  {guess.word}: {status}")
+    
+    if turn.invalid_guess_word:
+        print(f"  Invalid: {turn.invalid_guess_word} - {turn.invalid_guess_reason}")
+
+# String representation
+print(turn)
+# Output: Turn 1 (blue): 'fruit' (2) → [apple (blue) ✓, banana (blue) ✓]
+```
+
+#### String Representation
+
+Turn provides a formatted string:
+```
+Turn {number} ({team}): '{hint}' ({count}) → [{guesses}]
+```
+
+With invalid guess:
+```
+Turn {number} ({team}): '{hint}' ({count}) → [{guesses}] | Invalid guess: {word} ({reason})
+```
+
+## Type Usage Examples
+
+### Working with Teams
+
+```python
+from game import Team, GameState
+
+# Get current team
+current = game.current_team
+
+if current == Team.BLUE:
+    print("Blue team's turn")
+    # Get blue team's remaining words
+    remaining = game.get_remaining_words(Team.BLUE)
+    print(f"Blue has {len(remaining)} words left")
+
+# Switch between teams
+other_team = Team.RED if current == Team.BLUE else Team.BLUE
+```
+
+### Working with Card Colors
+
+```python
+from game import CardColor, Board
+
+# Get words by color
+blue_words = board.get_words_by_color(CardColor.BLUE)
+red_words = board.get_words_by_color(CardColor.RED)
+neutral_words = board.get_words_by_color(CardColor.NEUTRAL)
+bomb = board.get_words_by_color(CardColor.BOMB)
+
+# Check card color
+color = board.get_color("apple")
+if color == CardColor.BOMB:
+    print("Don't pick this word!")
+elif color == CardColor.NEUTRAL:
+    print("Neutral bystander")
+```
+
+### Checking Game Outcomes
+
+```python
+from game import GameOutcome
+
+# Check game status
+if game.game_outcome == GameOutcome.IN_PROGRESS:
+    print("Game ongoing")
+elif game.game_outcome == GameOutcome.BLUE_WIN:
+    print("Blue team wins!")
+elif game.game_outcome == GameOutcome.RED_WIN:
+    print("Red team wins!")
+
+# Shorthand check
+if game.is_game_over:
+    winner = "Blue" if game.game_outcome == GameOutcome.BLUE_WIN else "Red"
+    print(f"{winner} wins!")
+```
+
+### Processing Turn Results
+
+```python
+from game import TurnResult
+
+# Make a guess and handle result
+result = game.make_guess("apple")
+
+if result.hit_bomb:
+    print(f"💣 BOMB! {game.current_team.value} team loses!")
+    print(f"Winner: {game.game_outcome.value}")
+elif result.correct:
+    print(f"✓ Correct! {result.word} is {result.color.value}")
+    # Continue guessing
+    if not game.is_game_over:
+        # Make another guess or end turn
+        pass
+else:
+    print(f"✗ Wrong. {result.word} is {result.color.value}")
+    game.end_turn()  # End turn on wrong guess
+```
+
+### Analyzing Turn History
+
+```python
+# Get complete game history
+for turn in game.turn_history:
+    print(f"\nTurn {turn.turn_number} - {turn.team.value.upper()}")
+    print(f"Hint: '{turn.hint_word}' ({turn.hint_count})")
+    
+    # Analyze guesses
+    correct_guesses = [g for g in turn.guesses if g.correct]
+    wrong_guesses = [g for g in turn.guesses if not g.correct and not g.hit_bomb]
+    bomb_guesses = [g for g in turn.guesses if g.hit_bomb]
+    
+    print(f"  Correct: {len(correct_guesses)}")
+    print(f"  Wrong: {len(wrong_guesses)}")
+    
+    if bomb_guesses:
+        print(f"  💣 Hit bomb: {bomb_guesses[0].word}")
+    
+    if turn.invalid_guess_word:
+        print(f"  Invalid attempt: {turn.invalid_guess_word}")
+```
+
+## Type Imports
+
+All types are available from the main `game` module:
+
+```python
+from game import (
+    # Classes
+    Board,
+    GameState,
+    
+    # Enums
+    Team,
+    CardColor,
+    GameOutcome,
+    
+    # Data classes
+    TurnResult,
+    Turn
+)
+```
+
+<Note>
+The `Turn` class is not typically instantiated directly - it's created internally by `GameState` and accessed through `game.turn_history`.
+</Note>

@@ -1,0 +1,511 @@
+---
+title: Installation
+description: Complete setup guide for the Codenames AI Benchmark with detailed verification steps
+---
+
+# Installation
+
+This guide provides detailed installation instructions for setting up the Codenames AI Benchmark, including environment setup, dependency installation, API key configuration, and verification.
+
+## System Requirements
+
+### Python Version
+
+- **Required:** Python 3.8 or higher
+- **Recommended:** Python 3.10+
+
+Check your Python version:
+
+```bash
+python3 --version
+```
+
+### Operating Systems
+
+- **Linux** (Ubuntu, Debian, Fedora, etc.)
+- **macOS** (10.15+)
+- **Windows** (with WSL2 or native Python)
+
+## Step-by-Step Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/your-org/code-names-benchmark.git
+    cd code-names-benchmark
+    ```
+
+    Verify you're in the correct directory:
+    ```bash
+    ls -la
+    # Should see: baml_src/, game/, agents/, demo_simple_game.py, etc.
+    ```
+  </Step>
+
+  <Step title="Create a virtual environment (recommended)">
+    Using a virtual environment isolates dependencies and prevents conflicts:
+
+    <CodeGroup>
+      ```bash Linux/macOS
+      # Create virtual environment
+      python3 -m venv venv
+
+      # Activate it
+      source venv/bin/activate
+      ```
+
+      ```bash Windows (PowerShell)
+      # Create virtual environment
+      python -m venv venv
+
+      # Activate it
+      .\venv\Scripts\Activate.ps1
+      ```
+
+      ```bash Windows (CMD)
+      # Create virtual environment
+      python -m venv venv
+
+      # Activate it
+      venv\Scripts\activate.bat
+      ```
+    </CodeGroup>
+
+    <Note>
+      When activated, your terminal prompt will show `(venv)` at the beginning.
+    </Note>
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required packages from `requirements.txt`:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+    This installs the following packages:
+
+    | Package | Version | Purpose |
+    |---------|---------|----------|
+    | `baml-py` | 0.211.2 | Structured LLM outputs and prompt management |
+    | `openai` | ≥1.0.0 | OpenAI, xAI Grok, and DeepSeek clients |
+    | `anthropic` | ≥0.18.0 | Claude models |
+    | `google-generativeai` | ≥0.3.0 | Gemini models |
+    | `python-dotenv` | ≥1.0.0 | Load environment variables from `.env` |
+    | `pandas` | ≥2.0.0 | Benchmark data analysis |
+    | `numpy` | ≥1.24.0 | Numerical computations |
+    | `matplotlib` | ≥3.7.0 | Visualization generation |
+    | `seaborn` | ≥0.12.0 | Statistical visualizations |
+    | `scipy` | ≥1.10.0 | Statistical analysis |
+
+    Verify installation:
+    ```bash
+    pip list | grep baml
+    # Should show: baml-py 0.211.2
+    ```
+  </Step>
+
+  <Step title="Set up environment variables">
+    Copy the example environment file:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    The `.env.example` file contains placeholders for all supported providers:
+
+    ```bash .env.example
+    # OpenAI API Key (for GPT-4o, GPT-4o-mini, etc.)
+    # Get your key at: https://platform.openai.com/api-keys
+    OPENAI_API_KEY=your_openai_api_key_here
+
+    # Anthropic API Key (for Claude models)
+    # Get your key at: https://console.anthropic.com/settings/keys
+    ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+    # Google Gemini API Key (for Gemini models)
+    # Get your key at: https://aistudio.google.com/app/apikey
+    GOOGLE_API_KEY=your_google_api_key_here
+
+    # xAI Grok API Key (for Grok models)
+    # Get your key at: https://console.x.ai/
+    XAI_API_KEY=your_xai_api_key_here
+
+    # DeepSeek API Key (for DeepSeek models)
+    # Get your key at: https://platform.deepseek.com/api_keys
+    DEEPSEEK_API_KEY=your_deepseek_api_key_here
+
+    # OpenRouter API Key (for accessing multiple models)
+    # Get your key at: https://openrouter.ai/keys
+    OPENROUTER_API_KEY=your_openrouter_api_key_here
+    ```
+
+    <Warning>
+      **You only need at least ONE API key to get started.** The demo defaults to OpenRouter free models.
+    </Warning>
+  </Step>
+
+  <Step title="Obtain API keys">
+    Choose at least one provider and get your API key:
+
+    <AccordionGroup>
+      <Accordion title="OpenRouter (Recommended for Testing)" icon="circle">
+        **Best for:** Free experimentation with multiple models
+
+        1. Visit [openrouter.ai/keys](https://openrouter.ai/keys)
+        2. Sign up or log in
+        3. Click "Create Key"
+        4. Copy the key and add to `.env`:
+        ```bash
+        OPENROUTER_API_KEY=sk-or-v1-...
+        ```
+
+        **Free models available:**
+        - Devstral (Mistral)
+        - MIMO V2 Flash
+        - Nemotron Nano 12B
+        - DeepSeek R1T Chimera
+        - GLM 4.5 Air
+        - Llama 3.3 70B
+        - OLMo 3.1 32B
+      </Accordion>
+
+      <Accordion title="OpenAI" icon="circle">
+        **Best for:** GPT-5, GPT-4.1, o-series reasoning models
+
+        1. Visit [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+        2. Log in to your OpenAI account
+        3. Click "Create new secret key"
+        4. Copy the key (you won't see it again!)
+        5. Add to `.env`:
+        ```bash
+        OPENAI_API_KEY=sk-...
+        ```
+
+        **Pricing:** GPT-5.2: $1.75/1M input, $14/1M output (~$0.02-0.10 per game)
+
+        <Note>
+          OpenAI offers $5 free credits for new accounts.
+        </Note>
+      </Accordion>
+
+      <Accordion title="Anthropic" icon="circle">
+        **Best for:** Claude Sonnet 4.5, Claude Haiku 4.5, Claude Opus 4.1
+
+        1. Visit [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
+        2. Log in to your Anthropic account
+        3. Click "Create Key"
+        4. Copy the key
+        5. Add to `.env`:
+        ```bash
+        ANTHROPIC_API_KEY=sk-ant-...
+        ```
+
+        **Pricing:** Claude Sonnet 4.5: $3/1M input, $15/1M output (~$0.05 per game)
+      </Accordion>
+
+      <Accordion title="Google Gemini" icon="circle">
+        **Best for:** Gemini 2.5 Pro, Gemini 2.5 Flash (fast and cost-effective)
+
+        1. Visit [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
+        2. Sign in with your Google account
+        3. Click "Create API Key"
+        4. Copy the key
+        5. Add to `.env`:
+        ```bash
+        GOOGLE_API_KEY=AIza...
+        ```
+
+        **Pricing:** Gemini 2.5 Flash: Very low cost (~$0.003 per game)
+
+        <Note>
+          Gemini has a generous free tier with high rate limits.
+        </Note>
+      </Accordion>
+
+      <Accordion title="xAI Grok" icon="circle">
+        **Best for:** Grok 4, Grok 3 models
+
+        1. Visit [console.x.ai](https://console.x.ai/)
+        2. Sign in with your account
+        3. Navigate to API keys section
+        4. Create a new API key
+        5. Add to `.env`:
+        ```bash
+        XAI_API_KEY=xai-...
+        ```
+      </Accordion>
+
+      <Accordion title="DeepSeek" icon="circle">
+        **Best for:** Cost-effective reasoning (DeepSeek V3.2)
+
+        1. Visit [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys)
+        2. Sign up or log in
+        3. Click "Create API Key"
+        4. Copy the key
+        5. Add to `.env`:
+        ```bash
+        DEEPSEEK_API_KEY=sk-...
+        ```
+
+        **Pricing:** Extremely cost-effective (~$0.002 per game)
+      </Accordion>
+    </AccordionGroup>
+  </Step>
+
+  <Step title="Verify installation">
+    Run the test suite to verify everything is working:
+
+    ```bash
+    # Check Python can import all dependencies
+    python3 -c "from baml_client import b; from agents.llm import BAMLModel; print('✓ All imports successful')"
+    ```
+
+    Verify API keys are loaded:
+    ```bash
+    python3 -c "from dotenv import load_dotenv; import os; load_dotenv(); print('✓ API keys loaded:', len([k for k in os.environ if 'API_KEY' in k]), 'found')"
+    ```
+
+    <Note>
+      If you see "✓" checkmarks, you're ready to go!
+    </Note>
+  </Step>
+
+  <Step title="Run verification game">
+    Test your setup with a quick demo:
+
+    ```bash
+    python3 demo_simple_game.py
+    ```
+
+    Expected output:
+    ```
+    ======================================================================
+      CODENAMES: MULTI-MODEL DEMO
+    ======================================================================
+
+    --- Checking API Keys ---
+      [OK] Devstral - API key found
+      [OK] MIMO V2 Flash - API key found
+      ...
+
+    --- Generating Game Board ---
+    [OK] Generated 25 random words for the board
+    ...
+    ```
+
+    <Warning>
+      If you see `[MISSING]` errors, double-check your `.env` file has valid API keys.
+    </Warning>
+  </Step>
+</Steps>
+
+## Configuration Files
+
+### BAML Configuration
+
+The BAML configuration defines LLM clients and prompts:
+
+```
+baml_src/
+├── main.baml       # Agent prompts and schemas
+└── clients.baml    # LLM provider configurations
+```
+
+If you modify BAML files, regenerate the client:
+
+```bash
+baml generate
+```
+
+### Game Configuration
+
+Customize game parameters in `config.py`:
+
+```python config.py
+from config import Config
+
+# Standard 25-word game (9 blue, 8 red, 7 neutral, 1 bomb)
+config = Config.default()
+
+# Custom board size
+large_game = Config.custom_game(board_size=49)
+mini_game = Config.custom_game(board_size=9)
+```
+
+### Model Configuration
+
+Model-specific settings in `model_config.py`:
+
+- Temperature configurations per model
+- Benchmark model selection
+- Display name mappings
+
+## Directory Structure
+
+After installation, your directory should look like:
+
+```
+code-names-benchmark/
+├── .env                    # Your API keys (DO NOT COMMIT)
+├── .env.example            # Template for API keys
+├── requirements.txt        # Python dependencies
+├── config.py              # Game configuration
+├── model_config.py        # Model-specific settings
+├── demo_simple_game.py    # Quick demo script
+├── benchmark.py           # Benchmark runner
+├── baml_src/              # BAML prompt definitions
+│   ├── main.baml
+│   └── clients.baml
+├── baml_client/           # Generated BAML client (auto-generated)
+├── game/                  # Core game engine
+│   ├── board.py
+│   └── state.py
+├── agents/                # Agent implementations
+│   ├── base.py
+│   ├── random_agents.py
+│   └── llm/
+│       └── baml_agents.py
+├── orchestrator/          # Game coordination
+│   └── game_runner.py
+├── analysis/              # Benchmark analysis
+├── utils/                 # Utilities
+│   ├── generate_words.py
+│   └── words.csv
+└── benchmark_results/     # Generated benchmark data
+```
+
+## Security Best Practices
+
+<Warning>
+  **Never commit your `.env` file or expose API keys publicly!**
+</Warning>
+
+### Protect Your API Keys
+
+1. **Add `.env` to `.gitignore`:**
+   ```bash .gitignore
+   .env
+   .env.local
+   *.env
+   ```
+
+2. **Use environment-specific files:**
+   - `.env` for local development
+   - `.env.production` for production
+   - Never version control these files
+
+3. **Set spending limits:**
+   - OpenAI: [platform.openai.com/account/billing/limits](https://platform.openai.com/account/billing/limits)
+   - Anthropic: [console.anthropic.com/settings/billing](https://console.anthropic.com/settings/billing)
+   - Google: [cloud.google.com/billing/docs/how-to/budgets](https://cloud.google.com/billing/docs/how-to/budgets)
+
+4. **Rotate keys regularly:**
+   - Generate new keys periodically
+   - Revoke old keys after migration
+
+## Troubleshooting
+
+### Import Errors
+
+**Problem:** `ModuleNotFoundError: No module named 'baml_client'`
+
+**Solution:**
+```bash
+baml generate
+pip install -r requirements.txt
+```
+
+### API Key Issues
+
+**Problem:** "No API keys found" or authentication errors
+
+**Solutions:**
+1. Verify `.env` file exists and contains keys
+2. Check for typos in variable names (e.g., `OPENAI_API_KEY` not `OPENAI_KEY`)
+3. Ensure no spaces around `=` in `.env` file
+4. Verify the API key is valid (test in provider console)
+5. Check you're using the correct key for the model
+
+### Rate Limiting
+
+**Problem:** "Rate limit exceeded" errors
+
+**Solutions:**
+1. **Free tier limits:** Wait and retry, or upgrade account
+2. **Use different provider:** Switch to models with higher limits
+3. **Reduce concurrency:** Run fewer games simultaneously
+4. **Add delays:** Implement retry logic with exponential backoff
+
+### Slow Performance
+
+**Problem:** Games take very long to complete
+
+**Normal behavior:** LLM API calls take 2-10 seconds each. A game makes 20-50+ calls.
+
+**Optimization tips:**
+1. Use faster models (Haiku, Flash Lite, Mini, Nano variants)
+2. Enable verbose mode to see progress: `verbose=True`
+3. Reduce board size for testing: `Config.custom_game(board_size=9)`
+4. Use `verbose=False` for production benchmarks
+
+### BAML Generation Errors
+
+**Problem:** Errors when running scripts related to BAML client
+
+**Solution:**
+```bash
+baml generate
+```
+
+This regenerates the client code from `baml_src/` definitions.
+
+## Updating the Benchmark
+
+To update to the latest version:
+
+```bash
+# Pull latest changes
+git pull origin main
+
+# Update dependencies
+pip install -r requirements.txt --upgrade
+
+# Regenerate BAML client
+baml generate
+
+# Verify installation
+python3 demo_simple_game.py
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Run your first game in 5 minutes
+  </Card>
+  <Card title="Model Selection" icon="brain" href="/guides/model-selection">
+    Explore all 80+ available models
+  </Card>
+  <Card title="Run Benchmarks" icon="chart-line" href="/guides/benchmarking">
+    Evaluate models across multiple games
+  </Card>
+  <Card title="Configure Games" icon="sliders" href="/guides/configuration">
+    Customize board size and game rules
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you encounter issues:
+
+1. **Check documentation:** Review relevant guides in this documentation
+2. **Search issues:** Look for similar problems in [GitHub Issues](https://github.com/your-org/code-names-benchmark/issues)
+3. **Ask community:** Join our Discord/Slack for support
+4. **Report bugs:** Create a new issue with detailed reproduction steps
+
+Include the following in bug reports:
+- Operating system and Python version
+- Full error message and stack trace
+- Steps to reproduce
+- Contents of your `.env` (without actual keys!)

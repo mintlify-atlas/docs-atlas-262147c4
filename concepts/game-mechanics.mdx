@@ -1,0 +1,333 @@
+---
+title: 'Game Mechanics'
+description: 'How the Codenames game engine works in this AI benchmark'
+icon: 'chess-board'
+---
+
+## Overview
+
+The game engine implements the core rules of Codenames, optimized specifically for LLM agents. Instead of a visual grid layout, words are represented as plain lists—making them easier to include in prompts and process by language models.
+
+<Info>
+The game engine is located in the `game/` directory and includes `Board`, `GameState`, and supporting types.
+</Info>
+
+## Core Components
+
+### Board Structure
+
+The `Board` class manages the word-to-color mapping for all 25 cards on the board.
+
+```python game/board.py
+from game import Board, CardColor
+
+words = ["apple", "banana", "car", ...]  # 25 words
+board = Board(words)
+
+# Query the board
+blue_words = board.get_words_by_color(CardColor.BLUE)
+color = board.get_color("apple")
+all_words = board.all_words
+```
+
+#### Card Colors
+
+Each word on the board has one of four colors:
+
+```python game/board.py
+class CardColor(Enum):
+    RED = "red"        # Red team's words
+    BLUE = "blue"      # Blue team's words
+    NEUTRAL = "neutral" # Neutral words (no points)
+    BOMB = "bomb"       # The assassin (instant loss)
+```
+
+<CardGroup cols={2}>
+  <Card title="Blue Team" icon="square" iconType="solid" color="#3b82f6">
+    9 words (starting team gets +1)
+  </Card>
+  <Card title="Red Team" icon="square" iconType="solid" color="#ef4444">
+    8 words
+  </Card>
+  <Card title="Neutral" icon="square" iconType="solid" color="#94a3b8">
+    7 words (no effect)
+  </Card>
+  <Card title="Bomb" icon="skull" iconType="solid" color="#000000">
+    1 word (instant game over)
+  </Card>
+</CardGroup>
+
+### Game State Management
+
+The `GameState` class tracks the current game status, turn history, and win conditions.
+
+```python game/state.py
+from game import GameState, Team
+
+game = GameState(board)
+
+# Play a turn
+game.start_turn("animal", 2)  # Hint: "animal", count: 2
+result = game.make_guess("dog")
+game.end_turn()
+
+# Check game status
+print(game.is_game_over)      # False
+print(game.current_team)       # Team.RED
+print(game.get_team_scores())  # (blue_remaining, red_remaining)
+```
+
+#### Team Enumeration
+
+```python game/state.py
+class Team(Enum):
+    RED = "red"
+    BLUE = "blue"
+```
+
+<Note>
+Blue team always starts first by default. The starting team gets one extra word (9 vs 8).
+</Note>
+
+## Game Flow
+
+A typical game follows this pattern:
+
+<Steps>
+  <Step title="Initialize Board">
+    Create a `Board` with 25 words. Colors are randomly assigned according to the standard distribution.
+    
+    ```python
+    from game import Board
+    words = load_words(25)  # Your word list
+    board = Board(words)
+    ```
+  </Step>
+  
+  <Step title="Create Game State">
+    Initialize `GameState` to track turns and revealed words.
+    
+    ```python
+    from game import GameState
+    game = GameState(board)
+    ```
+  </Step>
+  
+  <Step title="Play Turns">
+    Each turn consists of three phases:
+    
+    1. **Start Turn**: Spymaster gives a hint
+    2. **Make Guesses**: Field operative guesses words
+    3. **End Turn**: Switch teams
+    
+    ```python
+    # Spymaster gives hint
+    game.start_turn(hint_word="animal", hint_count=2)
+    
+    # Field operative makes guesses
+    result1 = game.make_guess("dog")   # Correct!
+    result2 = game.make_guess("cat")   # Correct!
+    result3 = game.make_guess("tree")  # Wrong - neutral word
+    
+    # Turn ends (automatically switches teams)
+    game.end_turn()
+    ```
+  </Step>
+  
+  <Step title="Check Win Condition">
+    The game automatically detects when a team has won.
+    
+    ```python
+    if game.is_game_over:
+        print(f"Game over! Winner: {game.game_outcome}")
+    ```
+  </Step>
+</Steps>
+
+## Turn Structure
+
+Each turn is represented by a `Turn` object that records the complete history:
+
+```python game/state.py
+@dataclass
+class Turn:
+    team: Team              # Which team took this turn
+    turn_number: int        # Sequential turn number
+    hint_word: str          # The hint given
+    hint_count: int         # How many words the hint relates to
+    guesses: List[TurnResult]  # All guesses made
+    invalid_guess_word: Optional[str] = None
+    invalid_guess_reason: Optional[str] = None
+```
+
+### Turn Results
+
+Each guess produces a `TurnResult` with detailed information:
+
+```python game/state.py
+@dataclass
+class TurnResult:
+    word: str          # The word that was guessed
+    color: CardColor   # The actual color revealed
+    correct: bool      # Was it the team's color?
+    hit_bomb: bool     # Did they hit the assassin?
+```
+
+## Win Conditions
+
+The game ends when one of three conditions is met:
+
+<AccordionGroup>
+  <Accordion title="Team Reveals All Words" icon="trophy">
+    A team wins when all their words have been revealed.
+    
+    ```python
+    # Blue team reveals all 9 blue words
+    if game.game_outcome == GameOutcome.BLUE_WIN:
+        print("Blue team wins!")
+    ```
+  </Accordion>
+  
+  <Accordion title="Opponent Hits Bomb" icon="skull">
+    If a team guesses the bomb word, they lose immediately and the other team wins.
+    
+    ```python
+    result = game.make_guess("bomb_word")
+    if result.hit_bomb:
+        print("Game over! Hit the bomb!")
+    # Game automatically sets outcome to opponent's win
+    ```
+  </Accordion>
+  
+  <Accordion title="Maximum Turns Reached" icon="clock">
+    Games automatically end after 50 turns to prevent infinite loops (configurable in `config.py`).
+  </Accordion>
+</AccordionGroup>
+
+```python game/state.py
+class GameOutcome(Enum):
+    RED_WIN = "red_win"
+    BLUE_WIN = "blue_win"
+    IN_PROGRESS = "in_progress"
+```
+
+## Game Configuration
+
+You can customize game parameters using `GameConfig`:
+
+```python config.py
+from config import GameConfig
+
+# Default configuration (25 words)
+config = GameConfig()
+
+# Custom board size
+config = GameConfig.custom(board_size=49)  # Larger board
+mini = GameConfig.custom(board_size=9)     # Quick games
+
+# Create board with custom config
+board = Board(words, config=config)
+```
+
+### Configuration Options
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `BOARD_SIZE` | 25 | Total number of words |
+| `BLUE_WORDS` | 9 | Blue team word count |
+| `RED_WORDS` | 8 | Red team word count |
+| `NEUTRAL_WORDS` | 7 | Neutral word count |
+| `BOMB_COUNT` | 1 | Number of bomb words |
+| `MAX_TURNS` | 50 | Turn limit before draw |
+| `STARTING_TEAM` | "BLUE" | Which team goes first |
+
+## LLM-Optimized Design
+
+The game engine includes several features specifically designed for language model agents:
+
+<CardGroup cols={2}>
+  <Card title="Plain Word Lists" icon="list">
+    No grid coordinates—just lists of words. Easier to include in prompts and process.
+  </Card>
+  
+  <Card title="Full History Tracking" icon="clock-rotate-left">
+    Complete turn history with hints, guesses, and outcomes for analysis.
+  </Card>
+  
+  <Card title="Automatic Validation" icon="shield-check">
+    Catches common LLM errors like hallucinated words or duplicate guesses.
+  </Card>
+  
+  <Card title="JSON Snapshots" icon="file-code">
+    Serializable game state for logging and debugging.
+    
+    ```python
+    snapshot = game.get_snapshot()
+    # Returns dict with complete game state
+    ```
+  </Card>
+</CardGroup>
+
+## Error Handling
+
+The game engine validates all actions and provides clear error messages:
+
+```python
+try:
+    result = game.make_guess("invalid_word")
+except ValueError as e:
+    print(e)  # "Word 'invalid_word' not on board"
+
+try:
+    result = game.make_guess("already_revealed")
+except ValueError as e:
+    print(e)  # "Word 'already_revealed' already revealed"
+```
+
+<Warning>
+All words are automatically normalized to lowercase. The engine performs case-insensitive lookups.
+</Warning>
+
+## Example: Complete Game
+
+```python
+from game import Board, GameState, CardColor
+
+# Create board
+words = ["dog", "cat", "house", "tree", "car", ...]  # 25 words
+board = Board(words)
+
+# Initialize game
+game = GameState(board)
+
+# Blue team's turn
+game.start_turn("animal", 2)
+result1 = game.make_guess("dog")   # Blue word - correct!
+result2 = game.make_guess("cat")   # Blue word - correct!
+game.end_turn()
+
+# Red team's turn
+game.start_turn("building", 1)
+result3 = game.make_guess("house")  # Red word - correct!
+game.end_turn()
+
+# Check scores
+blue_remaining, red_remaining = game.get_team_scores()
+print(f"Blue: {blue_remaining}, Red: {red_remaining}")  # Blue: 7, Red: 7
+
+# Get full game state
+snapshot = game.get_snapshot()
+print(snapshot['turn_history'])  # All turns with hints and guesses
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agents" icon="robot" href="/concepts/agents">
+    Learn how AI agents play the game using the HintGiver and Guesser interfaces
+  </Card>
+  
+  <Card title="BAML Integration" icon="brackets-curly" href="/concepts/baml">
+    Understand how BAML enables type-safe LLM interactions
+  </Card>
+</CardGroup>

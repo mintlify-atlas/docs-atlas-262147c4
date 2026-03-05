@@ -1,0 +1,175 @@
+---
+title: Introduction
+description: An AI benchmark where language models compete in the strategic word game Codenames
+---
+
+# Codenames AI Benchmark
+
+An AI benchmark where 4 language models play Codenames: two hint givers (spymasters) and two guessers (field operatives) competing as red and blue teams.
+
+## What is Codenames?
+
+Codenames is a strategic word association game where:
+
+- **Two teams compete** (red and blue) to find their words first
+- **Each team has two roles:**
+  - **Spymaster** - Sees which words belong to their team and gives one-word hints
+  - **Field Operative** - Only sees the words and must guess based on hints
+- **The challenge:** Spymasters give hints connecting multiple words, while avoiding opponent words, neutral words, and the deadly bomb
+- **Game ends when:** All team words are found (win), the bomb is hit (immediate loss), or max turns are reached
+
+<Note>
+  The spymaster knows all word colors but can only communicate through single-word hints. Field operatives must interpret these hints to identify their team's words.
+</Note>
+
+## Why Use This Benchmark?
+
+This benchmark evaluates LLMs on multiple cognitive skills simultaneously:
+
+<CardGroup cols={2}>
+  <Card title="Strategic Reasoning" icon="chess">
+    Models must plan multi-step strategies, balancing risk and reward when connecting words
+  </Card>
+  <Card title="Semantic Understanding" icon="brain">
+    Requires deep comprehension of word relationships, synonyms, and conceptual connections
+  </Card>
+  <Card title="Communication" icon="comments">
+    Spymasters encode meaning in single-word hints; operatives decode intent from minimal information
+  </Card>
+  <Card title="Team Coordination" icon="users">
+    Two models per team must work together, with different roles and information asymmetry
+  </Card>
+</CardGroup>
+
+### Why Codenames Tests Real Intelligence
+
+- **Information asymmetry** - Different agents have different knowledge (spymaster vs operative)
+- **Constrained communication** - One-word hints force creative encoding/decoding
+- **Risk management** - Every hint could accidentally trigger opponent words or the bomb
+- **Multi-hop reasoning** - Connecting multiple words through abstract concepts
+- **Competitive environment** - Models face active opposition, not just static problems
+
+## Key Features
+
+### Universal AI Agents with BAML
+
+<Note>
+  **BAML (Boundary ML)** provides type-safe structured outputs and universal LLM agents that work with any provider.
+</Note>
+
+```python
+from agents.llm import BAMLHintGiver, BAMLGuesser, BAMLModel
+from game import Team
+
+# Create agents with any model - mix and match providers!
+hint_giver = BAMLHintGiver(Team.BLUE, model=BAMLModel.GPT5_MINI)
+guesser = BAMLGuesser(Team.RED, model=BAMLModel.CLAUDE_SONNET_45)
+```
+
+**Why BAML?**
+- **One agent file** instead of provider-specific implementations
+- **Automatic structured outputs** - no manual JSON parsing
+- **Interactive playground** - test prompts in VSCode instantly
+- **Type-safe** with auto-validation and retries
+
+### Multiple LLM Providers
+
+Support for all major AI providers with 50+ models:
+
+- **OpenAI** - GPT-5, GPT-4.1, o-series reasoning models, GPT-4o
+- **Anthropic** - Claude Sonnet 4.5, Haiku 4.5, Opus 4.1
+- **Google** - Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.0 Flash
+- **xAI** - Grok 4, Grok 3 (Fast, Mini variants)
+- **DeepSeek** - DeepSeek V3.2 Chat and Reasoner
+- **OpenRouter** - Access to many free models for testing
+
+### Comprehensive Benchmark Suite
+
+Run systematic evaluations across model combinations:
+
+```bash
+# Run benchmark (uses free models by default)
+python benchmark.py
+
+# Analyze results with detailed metrics
+python analyze_benchmark_results.py benchmark_results/<result_file>.json
+```
+
+**Benchmark metrics include:**
+- Win rate by model and team
+- Hint success rate (hints leading to correct guesses)
+- Guess accuracy (percentage of correct guesses)
+- Turn efficiency (average turns to win)
+- Model synergies (which combinations work best together)
+
+### Flexible Configuration
+
+Customize game parameters via `config.py`:
+
+```python
+from config import Config
+
+# Standard 25-word game
+config = Config.default()
+
+# Custom variants
+large_board = Config.custom_game(board_size=49)  # More complex
+mini_game = Config.custom_game(board_size=9)     # Quick testing
+```
+
+## Cost-Effective Testing
+
+<Warning>
+  Start with **OpenRouter free models** for zero-cost experimentation before using paid APIs.
+</Warning>
+
+Approximate costs per game (December 2025):
+
+| Model Tier | Cost/Game | Examples |
+|------------|-----------|----------|
+| **Free** | $0.00 | OpenRouter free models (Devstral, MIMO, Llama 3.3) |
+| **Ultra-low** | ~$0.001 | Gemini 2.5 Flash Lite, DeepSeek Chat |
+| **Low** | ~$0.01 | Claude Haiku 4.5, Gemini 2.5 Flash |
+| **Medium** | ~$0.05 | GPT-5 Mini, Claude Sonnet 4.5 |
+| **Premium** | ~$0.30 | Claude Opus 4.1, GPT-5 Pro |
+
+**Cost management tips:**
+1. Start with OpenRouter free models
+2. Use `verbose=False` to reduce token usage
+3. Set API spending limits in provider dashboards
+4. Test with random agents first (completely free)
+
+## Project Architecture
+
+```
+code-names-benchmark/
+├── baml_src/              # BAML prompt definitions
+│   ├── main.baml          # Agent prompts and schemas
+│   └── clients.baml       # LLM provider configs
+├── game/                  # Core game engine
+│   ├── board.py           # Board state and word assignments
+│   └── state.py           # Game state and turn logic
+├── agents/                # Agent interfaces
+│   ├── base.py            # Abstract HintGiver/Guesser classes
+│   ├── llm/
+│   │   └── baml_agents.py # Universal BAML agents
+│   └── random_agents.py   # Random baseline agents
+├── orchestrator/          # Game coordination
+│   └── game_runner.py     # Coordinates 4 agents through game
+├── analysis/              # Benchmark analysis
+│   ├── metrics/           # Performance metric modules
+│   ├── pipeline.py        # Analysis pipeline
+│   └── viz.py             # Visualization generation
+└── demo_simple_game.py    # Complete game demo
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Run your first AI Codenames game in 5 minutes
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Detailed setup instructions and API key configuration
+  </Card>
+</CardGroup>

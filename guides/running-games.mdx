@@ -1,0 +1,218 @@
+---
+title: Running Games
+description: Learn how to run Codenames AI games with different model combinations
+icon: play
+---
+
+## Quick Start
+
+The fastest way to run a game is using the demo script:
+
+```bash
+python3 demo_simple_game.py
+```
+
+This runs a complete game with verbose output showing every hint, guess, and result.
+
+## Configuring Models
+
+Edit the `Players` class in `demo_simple_game.py` to choose which AI models play each role:
+
+```python
+from agents.llm import BAMLModel
+
+class Players:
+    BLUE_HINT_GIVER = BAMLModel.OPENROUTER_DEVSTRAL    
+    BLUE_GUESSER = BAMLModel.OPENROUTER_MIMO_V2_FLASH     
+    RED_HINT_GIVER = BAMLModel.OPENROUTER_OLMO3_32B     
+    RED_GUESSER = BAMLModel.OPENROUTER_NEMOTRON_NANO
+```
+
+You can mix any models from different providers!
+
+## Programmatic Game Setup
+
+Create and run games programmatically using the GameRunner:
+
+<Steps>
+  <Step title="Generate word list">
+    Create a random board with 25 words:
+    
+    ```python
+    from utils import generate_word_list
+    from game import Board
+    
+    words = generate_word_list(25)
+    board = Board(words)
+    ```
+  </Step>
+  
+  <Step title="Create AI agents">
+    Initialize agents for all four roles:
+    
+    ```python
+    from game import Team
+    from agents.llm import BAMLHintGiver, BAMLGuesser, BAMLModel
+    
+    # Blue team agents
+    blue_hint_giver = BAMLHintGiver(Team.BLUE, model=BAMLModel.GPT5_MINI)
+    blue_guesser = BAMLGuesser(Team.BLUE, model=BAMLModel.GPT5_MINI)
+    
+    # Red team agents
+    red_hint_giver = BAMLHintGiver(Team.RED, model=BAMLModel.CLAUDE_SONNET_45)
+    red_guesser = BAMLGuesser(Team.RED, model=BAMLModel.CLAUDE_SONNET_45)
+    ```
+  </Step>
+  
+  <Step title="Initialize game runner">
+    Create a GameRunner with the board and agents:
+    
+    ```python
+    from orchestrator import GameRunner
+    
+    runner = GameRunner(
+        board=board,
+        blue_hint_giver=blue_hint_giver,
+        blue_guesser=blue_guesser,
+        red_hint_giver=red_hint_giver,
+        red_guesser=red_guesser,
+        max_turns=50,
+        verbose=True,
+        game_id="my_game"
+    )
+    ```
+  </Step>
+  
+  <Step title="Run the game">
+    Execute the game and get results:
+    
+    ```python
+    result = runner.run()
+    
+    print(f"Outcome: {result.outcome.value}")
+    print(f"Winner: {result.winner.value if result.winner else 'Draw'}")
+    print(f"Total turns: {result.total_turns}")
+    print(f"Blue words remaining: {result.final_scores[0]}")
+    print(f"Red words remaining: {result.final_scores[1]}")
+    ```
+  </Step>
+</Steps>
+
+## Game Runner Options
+
+<ParamField path="board" type="Board" required>
+  The game board with 25 words and color assignments
+</ParamField>
+
+<ParamField path="blue_hint_giver" type="HintGiver" required>
+  Blue team's spymaster agent
+</ParamField>
+
+<ParamField path="blue_guesser" type="Guesser" required>
+  Blue team's field operative agent
+</ParamField>
+
+<ParamField path="red_hint_giver" type="HintGiver" required>
+  Red team's spymaster agent
+</ParamField>
+
+<ParamField path="red_guesser" type="Guesser" required>
+  Red team's field operative agent
+</ParamField>
+
+<ParamField path="max_turns" type="int" default="50">
+  Maximum turns before declaring a draw
+</ParamField>
+
+<ParamField path="verbose" type="bool" default="True">
+  Print detailed game progress to console
+</ParamField>
+
+<ParamField path="game_id" type="str">
+  Optional identifier for the game (auto-generated if not provided)
+</ParamField>
+
+## Game Result Structure
+
+The `GameResult` object contains complete game data:
+
+```python
+result.game_id              # Unique game identifier
+result.outcome              # GameOutcome enum (BLUE_WIN, RED_WIN, DRAW)
+result.winner               # Team enum or None
+result.total_turns          # Number of turns played
+result.final_scores         # (blue_remaining, red_remaining)
+result.snapshot             # Complete game state including turn history
+result.blue_hint_giver_model  # Model used for blue spymaster
+result.blue_guesser_model   # Model used for blue operative
+result.red_hint_giver_model # Model used for red spymaster
+result.red_guesser_model    # Model used for red operative
+result.error                # Error message if game failed
+result.timestamp            # When the game was played
+```
+
+## Viewing Turn History
+
+Access detailed turn-by-turn data:
+
+```python
+for turn in result.snapshot['turn_history']:
+    print(f"Turn {turn['turn_number']}: {turn['team']} team")
+    print(f"  Hint: '{turn['hint_word']}' for {turn['hint_count']} word(s)")
+    
+    for guess in turn['guesses']:
+        status = "CORRECT" if guess['correct'] else "WRONG"
+        print(f"  {status}: {guess['word']} ({guess['color']})")
+```
+
+## Retry Logic
+
+The GameRunner automatically retries on transient errors:
+
+- **Max retries**: 3 attempts
+- **Retry delay**: Exponential backoff (5s, 10s, 20s)
+- **Retryable errors**: 503 errors, rate limits, timeouts, network issues
+- **Non-retryable errors**: Invalid hints, parsing failures
+
+<Note>
+Retries do not pass the turn - the game waits and retries until successful or max retries exceeded.
+</Note>
+
+## Custom Board Sizes
+
+Create games with different board sizes:
+
+```python
+from config import Config
+
+# Mini game (9 words)
+mini_config = Config.custom_game(board_size=9)
+words = generate_word_list(9)
+board = Board(words, config=mini_config.game)
+
+# Large game (49 words)
+large_config = Config.custom_game(board_size=49)
+words = generate_word_list(49)
+board = Board(words, config=large_config.game)
+```
+
+<Warning>
+Board size must be odd for fair play. The system automatically calculates proportional word distributions.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Model Selection" icon="robot" href="/guides/model-selection">
+    Learn about available models and how to choose them
+  </Card>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Customize game rules and settings
+  </Card>
+  <Card title="Benchmarking" icon="chart-line" href="/guides/benchmarking">
+    Run systematic benchmarks across models
+  </Card>
+  <Card title="Cost Management" icon="dollar-sign" href="/guides/cost-management">
+    Track and optimize API costs
+  </Card>
+</CardGroup>

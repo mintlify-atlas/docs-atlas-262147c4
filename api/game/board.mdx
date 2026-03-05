@@ -1,0 +1,198 @@
+---
+title: 'Board'
+description: 'Simple Codenames board representation with word list and color assignments'
+---
+
+## Overview
+
+The `Board` class represents a Codenames game board with 25 words, each assigned a color (red, blue, neutral, or bomb). The board uses configuration from `GameConfig` for word distribution and is optimized for LLM agent interaction.
+
+## Constructor
+
+### `Board(words, config=None, seed=None)`
+
+Initialize a new game board with words and color assignments.
+
+<ParamField path="words" type="List[str]" required>
+  List of words for the board (will be normalized to lowercase). Must contain exactly 25 words.
+</ParamField>
+
+<ParamField path="config" type="GameConfig" default="None">
+  Game configuration object. Uses default configuration if not provided.
+</ParamField>
+
+<ParamField path="seed" type="int" default="None">
+  Random seed for reproducible board generation. Uses global random if None.
+</ParamField>
+
+<ResponseField name="raises" type="ValueError">
+  Raised if word count doesn't match `config.BOARD_SIZE` (25 words required).
+</ResponseField>
+
+<Note>
+All words are normalized to lowercase internally. Lookups are case-insensitive.
+</Note>
+
+```python
+from game import Board
+from config import GameConfig
+
+words = [
+    "apple", "banana", "car", "dog", "elephant",
+    "fire", "grape", "house", "ice", "jungle",
+    "kite", "lemon", "moon", "nest", "orange",
+    "piano", "queen", "river", "sun", "tree",
+    "umbrella", "violin", "water", "xray", "yellow"
+]
+
+# Create board with default config
+board = Board(words)
+
+# Create board with custom config and seed for reproducibility
+config = GameConfig()
+board = Board(words, config=config, seed=42)
+```
+
+## Properties
+
+### `all_words`
+
+Get all words on the board.
+
+<ResponseField name="return" type="List[str]">
+  List of all words on the board (lowercase).
+</ResponseField>
+
+```python
+words = board.all_words
+print(f"Board has {len(words)} words")
+# Output: Board has 25 words
+```
+
+## Methods
+
+### `get_color(word)`
+
+Get the color of a specific word on the board.
+
+<ParamField path="word" type="str" required>
+  The word to look up (case-insensitive).
+</ParamField>
+
+<ResponseField name="return" type="CardColor | None">
+  `CardColor` enum value if word is found, `None` otherwise.
+</ResponseField>
+
+```python
+from game import CardColor
+
+color = board.get_color("apple")
+if color == CardColor.BLUE:
+    print("Apple is a blue word!")
+elif color == CardColor.BOMB:
+    print("Apple is the bomb!")
+
+# Case-insensitive lookup
+color = board.get_color("APPLE")  # Same result as "apple"
+```
+
+### `get_words_by_color(color)`
+
+Get all words of a specific color.
+
+<ParamField path="color" type="CardColor" required>
+  The color to filter by (CardColor.RED, CardColor.BLUE, CardColor.NEUTRAL, or CardColor.BOMB).
+</ParamField>
+
+<ResponseField name="return" type="List[str]">
+  List of words with the specified color.
+</ResponseField>
+
+```python
+from game import CardColor
+
+# Get all blue team words
+blue_words = board.get_words_by_color(CardColor.BLUE)
+print(f"Blue team has {len(blue_words)} words: {blue_words}")
+
+# Get neutral words
+neutral_words = board.get_words_by_color(CardColor.NEUTRAL)
+
+# Check for bomb
+bomb_words = board.get_words_by_color(CardColor.BOMB)
+print(f"Bomb word: {bomb_words[0]}")
+```
+
+### `get_color_counts()`
+
+Get the count of cards by color.
+
+<ResponseField name="return" type="Dict[CardColor, int]">
+  Dictionary mapping each CardColor to its count on the board.
+</ResponseField>
+
+```python
+counts = board.get_color_counts()
+print(f"Blue: {counts[CardColor.BLUE]}")
+print(f"Red: {counts[CardColor.RED]}")
+print(f"Neutral: {counts[CardColor.NEUTRAL]}")
+print(f"Bomb: {counts[CardColor.BOMB]}")
+
+# Typical output:
+# Blue: 9
+# Red: 8
+# Neutral: 7
+# Bomb: 1
+```
+
+## CardColor Enum
+
+The `CardColor` enum represents the color/type of a card.
+
+```python
+from game import CardColor
+
+# Available values
+CardColor.RED      # Red team word
+CardColor.BLUE     # Blue team word
+CardColor.NEUTRAL  # Neutral bystander
+CardColor.BOMB     # Assassin (game-ending)
+
+# Access string value
+color = CardColor.BLUE
+print(color.value)  # "blue"
+```
+
+## Example Usage
+
+```python
+from game import Board, CardColor
+from config import GameConfig
+
+# Create a board
+words = [
+    "apple", "banana", "car", "dog", "elephant",
+    "fire", "grape", "house", "ice", "jungle",
+    "kite", "lemon", "moon", "nest", "orange",
+    "piano", "queen", "river", "sun", "tree",
+    "umbrella", "violin", "water", "xray", "yellow"
+]
+
+board = Board(words, seed=42)
+
+# Inspect the board
+print(board)
+# Output: Board(blue=9, red=8, neutral=7, bomb=1)
+
+# Get team words
+blue_words = board.get_words_by_color(CardColor.BLUE)
+red_words = board.get_words_by_color(CardColor.RED)
+
+# Check individual words
+if board.get_color("apple") == CardColor.BLUE:
+    print("Apple belongs to blue team")
+
+# Get all words
+all_words = board.all_words
+print(f"Total words: {len(all_words)}")
+```

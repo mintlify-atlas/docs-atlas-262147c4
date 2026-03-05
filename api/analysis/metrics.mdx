@@ -1,0 +1,389 @@
+---
+title: 'Analysis Metrics'
+description: 'Comprehensive metrics for benchmark analysis'
+icon: 'chart-bar'
+---
+
+## Overview
+
+The metrics module provides specialized functions for computing various performance metrics from benchmark data. Metrics are organized into focused modules: win rates, Elo ratings, confidence intervals, efficiency, errors, hints, momentum, and role-specific analysis.
+
+## Win Rate Metrics
+
+### team_combo_stats()
+
+Return normalized team combination statistics.
+
+```python
+from analysis.metrics.win_rates import team_combo_stats
+
+def team_combo_stats(data: BenchmarkData) -> pd.DataFrame
+```
+
+<ParamField path="data" type="BenchmarkData" required>
+  Loaded benchmark data
+</ParamField>
+
+**Returns:** DataFrame with columns: `blue_hint_giver`, `blue_guesser`, `red_hint_giver`, `red_guesser`, `games_played`, `blue_wins`, `red_wins`, `blue_win_rate`, `avg_turns`
+
+### best_hint_givers()
+
+Identify top performing hint givers.
+
+```python
+from analysis.metrics.win_rates import best_hint_givers
+
+def best_hint_givers(
+    combo_df: pd.DataFrame,
+    top_n: int = 10
+) -> pd.DataFrame
+```
+
+**Returns:** DataFrame with top N hint givers by average win rate.
+
+### best_guessers()
+
+Identify top performing guessers.
+
+```python
+from analysis.metrics.win_rates import best_guessers
+
+def best_guessers(
+    combo_df: pd.DataFrame,
+    top_n: int = 10
+) -> pd.DataFrame
+```
+
+**Returns:** DataFrame with top N guessers by average win rate.
+
+### first_mover_advantage()
+
+Calculate first mover advantage statistics.
+
+```python
+from analysis.metrics.win_rates import first_mover_advantage
+
+def first_mover_advantage(combo_df: pd.DataFrame) -> dict
+```
+
+**Returns:** Dictionary with keys:
+- `overall_blue_win_rate`: Blue team win percentage
+- `overall_red_win_rate`: Red team win percentage
+- `blue_advantage`: Difference from 50%
+- `mirror_match_blue_rate`: Blue win rate in mirror matches
+- `mirror_match_count`: Number of mirror matches
+- `total_games`: Total games analyzed
+
+## Elo Rating Metrics
+
+### compute_elo()
+
+Calculate Elo ratings for models in each role.
+
+```python
+from analysis.metrics.elo import compute_elo
+
+def compute_elo(
+    data: BenchmarkData,
+    k_factor: float = 32,
+    initial_rating: float = 1500
+) -> pd.DataFrame
+```
+
+<ParamField path="data" type="BenchmarkData" required>
+  Loaded benchmark data
+</ParamField>
+
+<ParamField path="k_factor" type="float" default="32">
+  Elo K-factor (higher = more volatile ratings)
+</ParamField>
+
+<ParamField path="initial_rating" type="float" default="1500">
+  Starting Elo rating for all models
+</ParamField>
+
+**Returns:** DataFrame with columns: `model`, `elo_hint_giver`, `elo_guesser`, `elo_combined`, `elo_best_role`
+
+## Confidence Interval Metrics
+
+### wilson_ci()
+
+Calculate Wilson score confidence intervals for win rates.
+
+```python
+from analysis.metrics.confidence import wilson_ci
+
+def wilson_ci(
+    model_perf_df: pd.DataFrame,
+    confidence: float = 0.95
+) -> pd.DataFrame
+```
+
+<ParamField path="model_perf_df" type="pd.DataFrame" required>
+  Model performance DataFrame
+</ParamField>
+
+<ParamField path="confidence" type="float" default="0.95">
+  Confidence level (0.95 = 95% CI)
+</ParamField>
+
+**Returns:** DataFrame with columns: `model`, `role`, `team`, `win_rate`, `ci_lower`, `ci_upper`, `ci_width`, `sample_size`, `wins`
+
+### pairwise_significance()
+
+Test statistical significance between two models using chi-squared test.
+
+```python
+from analysis.metrics.confidence import pairwise_significance
+
+def pairwise_significance(
+    model_perf_df: pd.DataFrame,
+    model_a: str,
+    model_b: str,
+    role: str | None = None
+) -> dict
+```
+
+**Returns:** Dictionary with chi-squared test results including p-value and significance at α=0.05.
+
+## Efficiency Metrics
+
+### game_efficiency()
+
+Calculate efficiency metrics for team combinations.
+
+```python
+from analysis.metrics.efficiency import game_efficiency
+
+def game_efficiency(data: BenchmarkData) -> pd.DataFrame
+```
+
+**Returns:** DataFrame with columns: `blue_hint_giver`, `blue_guesser`, `red_hint_giver`, `red_guesser`, `games_played`, `avg_turns`, `blue_wins`, `red_wins`, `blue_win_rate`, `blue_efficiency`, `red_efficiency`, `total_turns`
+
+### efficiency_by_model()
+
+Aggregate efficiency metrics by model.
+
+```python
+from analysis.metrics.efficiency import efficiency_by_model
+
+def efficiency_by_model(efficiency_df: pd.DataFrame) -> pd.DataFrame
+```
+
+**Returns:** DataFrame with per-model efficiency statistics.
+
+## Error Metrics
+
+### error_patterns()
+
+Analyze error patterns across games.
+
+```python
+from analysis.metrics.errors import error_patterns
+
+def error_patterns(data: BenchmarkData) -> dict
+```
+
+**Returns:** Dictionary containing:
+- `bomb_hits_by_model`: Bomb hits per model
+- `bomb_contexts`: Detailed bomb hit contexts
+- `invalid_by_type`: Invalid guesses by type (offboard, revealed, other)
+- `wrong_guess_colors`: Wrong guesses by color
+- `total_errors_by_model`: Total errors per model
+
+### error_summary()
+
+Create summary DataFrame of errors.
+
+```python
+from analysis.metrics.errors import error_summary
+
+def error_summary(errors: dict) -> pd.DataFrame
+```
+
+**Returns:** DataFrame with columns: `model`, `bomb_hits`, `invalid_offboard`, `invalid_revealed`, `invalid_other`, `total_errors`
+
+## Hint Pattern Metrics
+
+### hint_patterns()
+
+Analyze hint word patterns and statistics.
+
+```python
+from analysis.metrics.hints import hint_patterns
+
+def hint_patterns(data: BenchmarkData) -> dict
+```
+
+**Returns:** Dictionary containing:
+- `total_hints`: Total hints given
+- `unique_hints`: Number of unique hint words
+- `creativity_ratio`: Ratio of unique to total hints
+- `avg_hint_length`: Average hint word length
+- `avg_hint_count`: Average hint count (number)
+- `overall_success_rate`: Percentage of hints with ≥1 correct guess
+- `perfect_hint_rate`: Percentage of hints achieving promised count
+- `avg_efficiency`: Average correct guesses per promised
+- `hint_count_distribution`: Histogram of hint counts
+- `most_common_hints`: Top 15 most used hint words
+- `success_by_count`: Success rates grouped by hint count
+
+## Momentum Metrics
+
+### game_momentum()
+
+Analyze game momentum and competitiveness.
+
+```python
+from analysis.metrics.momentum import game_momentum
+
+def game_momentum(games: list[Game]) -> pd.DataFrame
+```
+
+**Returns:** DataFrame with columns: `game_id`, `winner`, `total_turns`, `lead_changes`, `was_comeback`, `deficit_overcome`, `max_blue_lead`, `max_red_lead`, `competitiveness`
+
+### momentum_summary()
+
+Aggregate momentum statistics.
+
+```python
+from analysis.metrics.momentum import momentum_summary
+
+def momentum_summary(df: pd.DataFrame) -> dict
+```
+
+**Returns:** Dictionary with aggregated momentum metrics.
+
+## Role-Specific Metrics
+
+### hint_efficiency()
+
+Calculate hint giver efficiency metrics.
+
+```python
+from analysis.metrics.roles import hint_efficiency
+
+def hint_efficiency(model_perf_df: pd.DataFrame) -> pd.DataFrame
+```
+
+**Returns:** DataFrame with columns: `model`, `team`, `hints_given`, `avg_hint_count`, `guess_yield`, `efficiency`, `hint_success_rate`, `risk_profile`, `overcommit_rate`, `ambiguity_rate`, `win_rate`
+
+**Risk profiles:**
+- **aggressive**: avg_hint_count > 2.5
+- **balanced**: 1.5 ≤ avg_hint_count ≤ 2.5
+- **conservative**: avg_hint_count < 1.5
+
+### guesser_performance()
+
+Calculate detailed guesser performance metrics.
+
+```python
+from analysis.metrics.roles import guesser_performance
+
+def guesser_performance(model_perf_df: pd.DataFrame) -> pd.DataFrame
+```
+
+**Returns:** DataFrame with columns: `model`, `team`, `games_played`, `first_guess_accuracy`, `overall_accuracy`, `bomb_rate`, `bomb_hits`, `invalid_rate`, `invalid_breakdown`, `guesses_per_turn`, `empty_turn_rate`, `risk_adjusted_accuracy`, `win_rate`
+
+### role_versatility()
+
+Calculate model versatility across roles.
+
+```python
+from analysis.metrics.roles import role_versatility
+
+def role_versatility(model_perf_df: pd.DataFrame) -> pd.DataFrame
+```
+
+**Returns:** DataFrame with columns: `model`, `hint_giver_win_rate`, `hint_giver_games`, `guesser_win_rate`, `guesser_games`, `versatility_score`, `best_role`, `role_gap`, `combined_win_rate`, `total_games`
+
+### matchup_matrix()
+
+Create head-to-head matchup matrix for a role.
+
+```python
+from analysis.metrics.roles import matchup_matrix
+
+def matchup_matrix(
+    combo_df: pd.DataFrame,
+    by_role: str = "hint_giver"
+) -> tuple[pd.DataFrame, pd.DataFrame]
+```
+
+<ParamField path="by_role" type="str" default="hint_giver">
+  Role to analyze: "hint_giver" or "guesser"
+</ParamField>
+
+**Returns:** Tuple of (win_rate_matrix, game_count_matrix)
+
+## Usage Examples
+
+### Computing Multiple Metrics
+
+```python
+from pathlib import Path
+from analysis.loader import load_benchmark_results
+from analysis.metrics import win_rates, elo, confidence
+
+# Load data
+data = load_benchmark_results(Path("benchmark_results/my_benchmark"))
+
+# Compute metrics
+combo_df = win_rates.team_combo_stats(data)
+elo_df = elo.compute_elo(data)
+model_perf = data.to_model_perf_df()
+ci_df = confidence.wilson_ci(model_perf)
+
+# Analyze results
+print("Top combinations:")
+print(combo_df.head())
+
+print("\nElo ratings:")
+print(elo_df.head())
+
+print("\nConfidence intervals:")
+print(ci_df.head())
+```
+
+### Analyzing Hint Efficiency
+
+```python
+from analysis.metrics.roles import hint_efficiency
+
+model_perf = data.to_model_perf_df()
+hint_eff = hint_efficiency(model_perf)
+
+# Find aggressive hint givers
+aggressive = hint_eff[hint_eff['risk_profile'] == 'aggressive']
+print("Aggressive hint givers:")
+print(aggressive[['model', 'avg_hint_count', 'efficiency', 'win_rate']])
+
+# Find most efficient
+top_efficient = hint_eff.nlargest(5, 'efficiency')
+print("\nMost efficient hint givers:")
+print(top_efficient[['model', 'efficiency', 'win_rate']])
+```
+
+### Error Analysis
+
+```python
+from analysis.metrics.errors import error_patterns, error_summary
+
+errors = error_patterns(data)
+error_df = error_summary(errors)
+
+print("Models by error rate:")
+print(error_df.sort_values('total_errors'))
+
+print("\nBomb hit contexts:")
+for ctx in errors['bomb_contexts'][:5]:
+    print(f"Game {ctx['game_id']}, Turn {ctx['turn']}: "
+          f"Team {ctx['team']} guessed '{ctx['word']}' "
+          f"for hint '{ctx['hint_word']} {ctx['hint_count']}'")
+```
+
+## Related
+
+- [Analysis Pipeline](/api/analysis/pipeline) - Orchestrates all metrics
+- [Visualization](/api/analysis/visualization) - Generate charts from metrics
+- [BenchmarkData](/api/analysis/pipeline) - Data models
