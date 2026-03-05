@@ -108,7 +108,7 @@
     "Guesser (abstract base class)",
     "BAMLHintGiver",
     "BAMLGuesser",
-    "BAMLModel (enum of 80+ supported models)",
+    "BAMLModel (enum of 50+ supported models)",
     "RandomHintGiver",
     "RandomGuesser",
     "GameRunner",
